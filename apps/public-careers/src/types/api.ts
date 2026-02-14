@@ -1,0 +1,81 @@
+export interface PublicJob {
+  id: string
+  title: string
+  slug: string
+  department: string
+  location_name: string
+  location_city: string
+  location_country: string
+  employment_type: string
+  remote_policy: string
+  salary_min: string | null
+  salary_max: string | null
+  salary_currency: string
+  level: string
+  published_at: string
+}
+
+export interface PublicJobDetail extends PublicJob {
+  team: string | null
+  description: string
+  requirements_required: string[]
+  requirements_preferred: string[]
+  screening_questions: unknown[]
+}
+
+export interface JobCategory {
+  department__id: string
+  department__name: string
+  job_count: number
+}
+
+export interface PaginatedResponse<T> {
+  count: number
+  next: string | null
+  previous: string | null
+  results: T[]
+}
+
+export interface CandidateApplication {
+  id: string
+  application_id: string
+  requisition_title: string
+  department: string
+  status: string
+  current_stage_name: string | null
+  applied_at: string
+}
+
+export interface ApplicationEvent {
+  id: string
+  event_type: string
+  actor_name: string
+  from_stage_name: string | null
+  to_stage_name: string | null
+  metadata: Record<string, unknown>
+  created_at: string
+}
+
+export interface CandidateApplicationDetail extends CandidateApplication {
+  location: string
+  cover_letter: string
+  screening_responses: Record<string, string>
+  withdrawn_at: string | null
+  events: ApplicationEvent[]
+}
+
+export interface UserProfile {
+  id: string
+  email: string
+  first_name: string
+  last_name: string
+  candidate_profile: {
+    phone: string
+    location_city: string
+    location_country: string
+    work_authorization: string
+    linkedin_url: string
+    portfolio_url: string
+    profile_completeness: number
+  }
+}

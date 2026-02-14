@@ -1,0 +1,136 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop, staging]
+  pull_request:
+    branches: [main, develop, staging]
+
+jobs:
+  backend-checks:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: hrplus
+          POSTGRES_USER: hrplus
+          POSTGRES_PASSWORD: hrplus
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/development.txt
+
+      - name: Lint with ruff
+        working-directory: backend
+        run: ruff check .
+
+      - name: Format check with ruff
+        working-directory: backend
+        run: ruff format --check .
+
+      - name: Run tests with pytest
+        working-directory: backend
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.development
+          DB_HOST: localhost
+          DB_NAME: hrplus
+          DB_USER: hrplus
+          DB_PASSWORD: hrplus
+          REDIS_URL: redis://localhost:6379/0
+        run: pytest . --cov=apps --cov-report=xml -v
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./backend/coverage.xml
+          flags: backend
+          name: backend-coverage
+
+  frontend-checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies (public-careers)
+        working-directory: apps/public-careers
+        run: npm ci
+
+      - name: Install dependencies (internal-dashboard)
+        working-directory: apps/internal-dashboard
+        run: npm ci
+
+      - name: Lint (public-careers)
+        working-directory: apps/public-careers
+        run: npm run lint
+
+      - name: Lint (internal-dashboard)
+        working-directory: apps/internal-dashboard
+        run: npm run lint
+
+  security-audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Audit Python dependencies
+        working-directory: backend
+        run: pip-audit -r requirements/base.txt
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Audit npm dependencies (public-careers)
+        working-directory: apps/public-careers
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Audit npm dependencies (internal-dashboard)
+        working-directory: apps/internal-dashboard
+        run: npm audit --audit-level=high
+        continue-on-error: true

@@ -1,0 +1,23 @@
+{
+  "name": "hrplus-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/public-careers",
+    "apps/internal-dashboard",
+    "apps/shared"
+  ],
+  "scripts": {
+    "dev:public": "npm run dev --workspace=apps/public-careers",
+    "dev:internal": "npm run dev --workspace=apps/internal-dashboard",
+    "build:public": "npm run build --workspace=apps/public-careers",
+    "build:internal": "npm run build --workspace=apps/internal-dashboard",
+    "build:all": "npm run build --workspaces --if-present",
+    "test:frontend": "npm run test --workspaces --if-present",
+    "lint:frontend": "npm run lint --workspaces --if-present",
+    "type-check:frontend": "npm run type-check --workspaces --if-present",
+    "sync-types": "cd backend && .venv/bin/python manage.py spectacular --file ../schema.yml && cd .. && npx openapi-typescript schema.yml -o apps/shared/types/api.ts"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.0.0"
+  }
+}

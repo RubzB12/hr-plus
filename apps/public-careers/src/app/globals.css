@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+:root {
+  /* Primary background: White */
+  --background: #ffffff;
+  /* Primary text: Black */
+  --foreground: #1f2937;
+  /* Primary accent: Retailability Red */
+  --primary: #D32F2F;
+  --primary-dark: #C62828;
+  --primary-light: #EF5350;
+  /* Secondary accent: Gray */
+  --secondary: #6B7280;
+  --secondary-dark: #4B5563;
+  /* Muted backgrounds and text */
+  --muted: #f9fafb;
+  --muted-foreground: #6B7280;
+  /* Border and dividers */
+  --border: #e5e7eb;
+  /* Accent color (red) */
+  --accent: #D32F2F;
+  --accent-foreground: #ffffff;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-dark: var(--primary-dark);
+  --color-primary-light: var(--primary-light);
+  --color-secondary: var(--secondary);
+  --color-secondary-dark: var(--secondary-dark);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Dark background: Near black */
+    --background: #111827;
+    /* Light text for dark mode */
+    --foreground: #f9fafb;
+    /* Primary accent: Retailability Red (slightly brighter for dark mode) */
+    --primary: #EF5350;
+    --primary-dark: #D32F2F;
+    --primary-light: #FF6F6A;
+    /* Secondary accent: Gray (lighter for dark mode) */
+    --secondary: #9CA3AF;
+    --secondary-dark: #6B7280;
+    /* Muted backgrounds and text for dark mode */
+    --muted: #1f2937;
+    --muted-foreground: #9CA3AF;
+    /* Border and dividers for dark mode */
+    --border: #374151;
+    /* Accent color (red) */
+    --accent: #EF5350;
+    --accent-foreground: #ffffff;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
