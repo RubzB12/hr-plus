@@ -41,6 +41,18 @@ urlpatterns = [
     # Assessments (internal + candidate/reference token-based)
     path('api/v1/', include('apps.assessments.urls')),
 
+    # Analytics (internal)
+    path('api/v1/internal/analytics/', include('apps.analytics.urls')),
+
+    # Compliance (candidate + internal)
+    path('api/v1/compliance/', include('apps.compliance.urls')),
+
+    # Onboarding (candidate portal + internal)
+    path('api/v1/onboarding/', include('apps.onboarding.urls')),
+
+    # Integrations (internal)
+    path('api/v1/integrations/', include('apps.integrations.urls')),
+
     # Admin
     path('admin/', admin.site.urls),
 ]

@@ -1,5 +1,9 @@
 """Management command to seed database with test data."""
 
+# ruff: noqa: S311
+# S311 disabled: This is a development seed script, not production cryptographic code.
+# Using standard random module is acceptable for generating test data.
+
 import random
 from datetime import date, timedelta
 from decimal import Decimal
@@ -21,8 +25,11 @@ from apps.accounts.models import (
     Team,
     WorkExperience,
 )
-from apps.applications.models import Application, ApplicationEvent
+from apps.applications.models import Application, ApplicationEvent, Tag, TalentPool
+from apps.assessments.models import AssessmentTemplate, Assessment, ReferenceCheckRequest
+from apps.communications.models import MessageThread, Message
 from apps.jobs.models import PipelineStage, Requisition
+from apps.onboarding.models import OnboardingTemplate
 
 User = get_user_model()
 
@@ -69,7 +76,7 @@ class Command(BaseCommand):
 
             # 6. Create teams
             self.stdout.write('Creating teams...')
-            teams = self.create_teams(departments, internal_users)
+            self.create_teams(departments, internal_users)
 
             # 7. Create candidate profiles
             self.stdout.write('Creating candidate profiles...')
@@ -83,7 +90,39 @@ class Command(BaseCommand):
 
             # 9. Create applications
             self.stdout.write('Creating applications...')
-            self.create_applications(candidates, requisitions)
+            applications = self.create_applications(candidates, requisitions)
+
+            # 10. Create assessment templates
+            self.stdout.write('Creating assessment templates...')
+            templates = self.create_assessment_templates(internal_users)
+
+            # 11. Create assessments
+            self.stdout.write('Creating assessments...')
+            self.create_assessments(applications, templates, internal_users)
+
+            # 12. Create reference check requests
+            self.stdout.write('Creating reference check requests...')
+            self.create_reference_checks(applications, internal_users)
+
+            # 13. Create talent pools
+            self.stdout.write('Creating talent pools...')
+            self.create_talent_pools(candidates, internal_users)
+
+            # 14. Create message threads
+            self.stdout.write('Creating message threads...')
+            self.create_message_threads(applications, internal_users, candidates)
+
+            # 15. Create compliance data
+            self.stdout.write('Creating compliance data...')
+            self.create_compliance_data(candidates, internal_users)
+
+            # 16. Create onboarding templates
+            self.stdout.write('Creating onboarding templates...')
+            self.create_onboarding_data(departments, job_levels)
+
+            # 17. Create integrations
+            self.stdout.write('Creating integrations...')
+            self.create_integrations()
 
         self.stdout.write(
             self.style.SUCCESS(
@@ -94,13 +133,51 @@ class Command(BaseCommand):
 
     def clear_data(self):
         """Clear existing test data."""
-        Application.objects.all().delete()
-        Requisition.objects.all().delete()
-        CandidateProfile.objects.all().delete()
-        InternalUser.objects.all().delete()
-        Team.objects.all().delete()
-        Department.objects.all().delete()
-        Location.objects.all().delete()
+        from django.db.models import signals
+
+        # Temporarily disconnect ES signals to avoid connection errors
+        try:
+            from django_elasticsearch_dsl import signals as es_signals
+            signals.post_save.disconnect(es_signals.handle_save)
+            signals.post_delete.disconnect(es_signals.handle_delete)
+            es_signals_disconnected = True
+        except Exception:
+            es_signals_disconnected = False
+
+        try:
+            # Import compliance models
+            from apps.compliance.models import (
+                AnonymizationRecord,
+                ConsentRecord,
+                DataRetentionPolicy,
+                EEOData,
+            )
+
+            # Delete compliance data first
+            ConsentRecord.objects.all().delete()
+            AnonymizationRecord.objects.all().delete()
+            EEOData.objects.all().delete()
+            DataRetentionPolicy.objects.all().delete()
+
+            # Delete other data
+            Message.objects.all().delete()
+            MessageThread.objects.all().delete()
+            TalentPool.objects.all().delete()
+            ReferenceCheckRequest.objects.all().delete()
+            Assessment.objects.all().delete()
+            AssessmentTemplate.objects.all().delete()
+            Application.objects.all().delete()
+            Requisition.objects.all().delete()
+            CandidateProfile.objects.all().delete()
+            InternalUser.objects.all().delete()
+            Team.objects.all().delete()
+            Department.objects.all().delete()
+            Location.objects.all().delete()
+        finally:
+            # Reconnect ES signals
+            if es_signals_disconnected:
+                signals.post_save.connect(es_signals.handle_save)
+                signals.post_delete.connect(es_signals.handle_delete)
         JobLevel.objects.all().delete()
         Role.objects.all().delete()
         Permission.objects.all().delete()
@@ -324,11 +401,11 @@ class Command(BaseCommand):
 
     def create_internal_users(self, departments):
         """Create internal staff users."""
-        # Create superuser
+        # Create superuser - lookup by username since it's the unique identifier
         superuser, created = User.objects.get_or_create(
-            email='admin@hrplus.local',
+            username='admin',
             defaults={
-                'username': 'admin',
+                'email': 'admin@hrplus.local',
                 'first_name': 'Admin',
                 'last_name': 'User',
                 'is_staff': True,
@@ -337,6 +414,16 @@ class Command(BaseCommand):
             },
         )
         if created:
+            superuser.set_password('admin123')
+            superuser.save()
+        else:
+            # Update existing superuser with seed data values
+            superuser.email = 'admin@hrplus.local'
+            superuser.first_name = 'Admin'
+            superuser.last_name = 'User'
+            superuser.is_staff = True
+            superuser.is_superuser = True
+            superuser.is_internal = True
             superuser.set_password('admin123')
             superuser.save()
 
@@ -749,6 +836,7 @@ class Command(BaseCommand):
         # Create applications (2-3 per open requisition)
         open_reqs = [r for r in requisitions if r.status == 'open']
 
+        applications = []
         app_count = 1
         for req in open_reqs:
             num_apps = random.randint(2, 4)
@@ -776,6 +864,11 @@ class Command(BaseCommand):
                 }
                 status = status_map.get(current_stage.name, 'applied')
 
+                cover_letter = (
+                    'I am very interested in this position and believe '
+                    'my skills align well with the requirements.'
+                )
+
                 application = Application.objects.create(
                     application_id=app_id,
                     candidate=candidate,
@@ -783,9 +876,9 @@ class Command(BaseCommand):
                     status=status,
                     current_stage=current_stage,
                     source=candidate.source,
-                    cover_letter='I am very interested in this position and believe my skills align well with the requirements.',
+                    cover_letter=cover_letter,
                     screening_responses={},
-                    is_starred=(random.random() > 0.7),  # Star 30% of applications
+                    is_starred=(random.random() > 0.7),  # Star 30%
                 )
 
                 # Create application event
@@ -798,7 +891,677 @@ class Command(BaseCommand):
                     },
                 )
 
+                applications.append(application)
                 app_count += 1
+
+        return applications
+
+    def create_assessment_templates(self, internal_users):
+        """Create assessment templates."""
+        from django.utils import timezone
+
+        templates_data = [
+            {
+                'name': 'Python Backend Assessment',
+                'type': 'coding',
+                'description': 'Technical assessment for backend Python developers',
+                'instructions': (
+                    'Complete the coding challenges within the time limit. '
+                    'Write clean, well-documented code.'
+                ),
+                'duration': 90,  # 90 minutes
+                'passing_score': Decimal('70.00'),
+                'questions': [
+                    {
+                        'id': 'q1',
+                        'question': 'Implement a function to reverse a linked list',
+                        'type': 'code',
+                        'points': 30,
+                    },
+                    {
+                        'id': 'q2',
+                        'question': 'Design a REST API for a blog system',
+                        'type': 'code',
+                        'points': 40,
+                    },
+                    {
+                        'id': 'q3',
+                        'question': 'Optimize this database query',
+                        'type': 'code',
+                        'points': 30,
+                    },
+                ],
+                'scoring_rubric': {
+                    'code_quality': {'weight': 30, 'max': 100},
+                    'correctness': {'weight': 50, 'max': 100},
+                    'efficiency': {'weight': 20, 'max': 100},
+                },
+            },
+            {
+                'name': 'System Design Interview',
+                'type': 'technical',
+                'description': 'System design assessment for senior engineers',
+                'instructions': (
+                    'Design a scalable system based on the requirements provided. '
+                    'Consider trade-offs and justify your decisions.'
+                ),
+                'duration': 60,
+                'passing_score': Decimal('75.00'),
+                'questions': [
+                    {
+                        'id': 'q1',
+                        'question': 'Design a URL shortening service like bit.ly',
+                        'type': 'design',
+                        'points': 50,
+                    },
+                    {
+                        'id': 'q2',
+                        'question': 'How would you scale this to handle 1M requests/sec?',
+                        'type': 'design',
+                        'points': 50,
+                    },
+                ],
+            },
+            {
+                'name': 'Behavioral Assessment',
+                'type': 'behavioral',
+                'description': 'Evaluate cultural fit and soft skills',
+                'instructions': 'Answer the following questions thoughtfully and honestly.',
+                'duration': 30,
+                'passing_score': None,
+                'questions': [
+                    {
+                        'id': 'q1',
+                        'question': (
+                            'Describe a challenging project you worked on '
+                            'and how you overcame obstacles'
+                        ),
+                        'type': 'text',
+                        'points': 25,
+                    },
+                    {
+                        'id': 'q2',
+                        'question': 'How do you handle conflicts with team members?',
+                        'type': 'text',
+                        'points': 25,
+                    },
+                    {
+                        'id': 'q3',
+                        'question': 'What motivates you in your work?',
+                        'type': 'text',
+                        'points': 25,
+                    },
+                    {
+                        'id': 'q4',
+                        'question': 'Where do you see yourself in 5 years?',
+                        'type': 'text',
+                        'points': 25,
+                    },
+                ],
+            },
+            {
+                'name': 'Culture Fit Assessment',
+                'type': 'culture_fit',
+                'description': 'Evaluate alignment with company values',
+                'instructions': (
+                    'Rate the following statements based on your preferences.'
+                ),
+                'duration': 20,
+                'passing_score': None,
+                'questions': [
+                    {
+                        'id': 'q1',
+                        'question': 'I prefer working independently vs. in a team',
+                        'type': 'rating',
+                        'scale': 5,
+                    },
+                    {
+                        'id': 'q2',
+                        'question': 'I value work-life balance',
+                        'type': 'rating',
+                        'scale': 5,
+                    },
+                ],
+            },
+        ]
+
+        templates = []
+        for data in templates_data:
+            template, _ = AssessmentTemplate.objects.get_or_create(
+                name=data['name'],
+                defaults=data,
+            )
+            templates.append(template)
+
+        return templates
+
+    def create_assessments(self, applications, templates, internal_users):
+        """Create assessments for some applications."""
+        from apps.assessments.services import AssessmentService
+
+        # Assign assessments to ~50% of applications
+        for application in applications[: len(applications) // 2]:
+            # Pick a random template (coding or behavioral)
+            template = random.choice(templates[:3])
+            recruiter = internal_users[0]  # Sarah (Recruiter)
+
+            try:
+                AssessmentService.assign_assessment(
+                    application=application,
+                    template=template,
+                    assigned_by=recruiter,
+                    due_days=random.randint(3, 7),
+                )
+            except Exception:
+                # Skip if already assigned
+                pass
+
+    def create_reference_checks(self, applications, internal_users):
+        """Create reference check requests for some applications."""
+        from apps.assessments.services import ReferenceCheckService
+
+        # Create references for ~30% of applications
+        for application in applications[: len(applications) // 3]:
+            recruiter = internal_users[0]  # Sarah (Recruiter)
+
+            # Create 2 reference checks per application
+            references_data = [
+                {
+                    'name': f'{application.candidate.user.first_name} Manager',
+                    'email': f'manager.{application.candidate.user.email}',
+                    'phone': '+1-555-0200',
+                    'company': 'Previous Company Inc',
+                    'title': 'Engineering Manager',
+                    'relationship': 'manager',
+                },
+                {
+                    'name': f'{application.candidate.user.first_name} Colleague',
+                    'email': f'colleague.{application.candidate.user.email}',
+                    'phone': '+1-555-0201',
+                    'company': 'Previous Company Inc',
+                    'title': 'Senior Engineer',
+                    'relationship': 'colleague',
+                },
+            ]
+
+            for ref_data in references_data:
+                try:
+                    ReferenceCheckService.create_reference_request(
+                        application=application,
+                        reference_name=ref_data['name'],
+                        reference_email=ref_data['email'],
+                        requested_by=recruiter,
+                        reference_phone=ref_data['phone'],
+                        reference_company=ref_data['company'],
+                        reference_title=ref_data['title'],
+                        relationship=ref_data['relationship'],
+                        due_days=14,
+                    )
+                except Exception:
+                    # Skip if duplicate
+                    pass
+
+    def create_talent_pools(self, candidates, internal_users):
+        """Create talent pools for proactive recruiting."""
+        from apps.applications.services import TalentPoolService
+
+        pools_data = [
+            {
+                'name': 'Senior Python Engineers',
+                'description': 'Experienced Python developers with 5+ years',
+                'is_dynamic': False,
+            },
+            {
+                'name': 'Frontend Specialists',
+                'description': 'React and TypeScript experts',
+                'is_dynamic': False,
+            },
+            {
+                'name': 'SF Bay Area Candidates',
+                'description': 'Candidates in San Francisco Bay Area',
+                'is_dynamic': True,
+                'search_criteria': {'location': 'San Francisco', 'radius_miles': 50},
+            },
+        ]
+
+        for pool_data in pools_data:
+            try:
+                pool = TalentPoolService.create_pool(
+                    name=pool_data['name'],
+                    description=pool_data['description'],
+                    owner=random.choice(internal_users),
+                    is_dynamic=pool_data.get('is_dynamic', False),
+                    search_criteria=pool_data.get('search_criteria', {}),
+                )
+
+                # Add some random candidates to static pools
+                if not pool.is_dynamic:
+                    num_candidates = random.randint(3, 8)
+                    pool_candidates = random.sample(
+                        list(candidates),
+                        min(num_candidates, len(candidates)),
+                    )
+                    pool.candidates.add(*pool_candidates)
+            except Exception:
+                # Skip if duplicate
+                pass
+
+    def create_message_threads(self, applications, internal_users, candidates):
+        """Create message threads between recruiters and candidates."""
+        from apps.communications.services import MessagingService
+
+        # Select a few applications to create message threads for
+        sample_applications = random.sample(
+            list(applications),
+            min(5, len(applications)),
+        )
+
+        for application in sample_applications:
+            candidate_user = application.candidate.user
+            recruiter = random.choice(internal_users).user
+
+            # Create thread about the application
+            thread = MessagingService.create_thread(
+                subject=f'Regarding your application for {application.requisition.title}',
+                participants=[candidate_user, recruiter],
+                application=application,
+                created_by=recruiter,
+            )
+
+            # Add some messages to the conversation
+            messages = [
+                (
+                    recruiter,
+                    f'Hi {candidate_user.first_name}, thank you for applying to the {application.requisition.title} position! '
+                    f'I wanted to reach out and let you know that we have received your application.',
+                ),
+                (
+                    candidate_user,
+                    f'Thank you for the update! I am very excited about this opportunity. '
+                    f'When can I expect to hear back about next steps?',
+                ),
+                (
+                    recruiter,
+                    f'We are currently reviewing all applications and expect to complete the initial screening by next week. '
+                    f'If your qualifications match what we are looking for, we will reach out to schedule an initial interview.',
+                ),
+                (
+                    candidate_user,
+                    f'That sounds great! I look forward to hearing from you.',
+                ),
+            ]
+
+            # Send the messages
+            for sender, body in messages:
+                MessagingService.send_message(
+                    thread=thread,
+                    sender=sender,
+                    body=body,
+                )
+
+        # Create a general thread between recruiters (team discussion)
+        if len(internal_users) >= 2:
+            recruiter1 = internal_users[0].user
+            recruiter2 = internal_users[1].user
+
+            team_thread = MessagingService.create_thread(
+                subject='Weekly recruiting sync',
+                participants=[recruiter1, recruiter2],
+                created_by=recruiter1,
+            )
+
+            team_messages = [
+                (
+                    recruiter1,
+                    'Hey, wanted to check in on the hiring pipeline for this week. '
+                    'How are your candidates progressing?',
+                ),
+                (
+                    recruiter2,
+                    'Going well! I have 3 candidates moving to the interview stage this week. '
+                    'What about you?',
+                ),
+                (
+                    recruiter1,
+                    'Same here. We should coordinate schedules for the interview panels.',
+                ),
+            ]
+
+            for sender, body in team_messages:
+                MessagingService.send_message(
+                    thread=team_thread,
+                    sender=sender,
+                    body=body,
+                )
+
+    def create_compliance_data(self, candidates, internal_users):
+        """Create compliance-related test data."""
+        from apps.compliance.models import ConsentRecord, DataRetentionPolicy
+        from apps.compliance.services import GDPRService
+
+        # Create data retention policies
+        policies = [
+            {
+                'data_type': 'candidate_application',
+                'retention_days': 730,  # 2 years
+                'grace_period_days': 30,
+                'is_active': True,
+                'description': 'Retain candidate applications for 2 years after last update.',
+            },
+            {
+                'data_type': 'candidate_profile',
+                'retention_days': 1095,  # 3 years
+                'grace_period_days': 30,
+                'is_active': True,
+                'description': 'Retain candidate profiles for 3 years after creation.',
+            },
+            {
+                'data_type': 'assessment_results',
+                'retention_days': 730,  # 2 years
+                'grace_period_days': 30,
+                'is_active': True,
+                'description': 'Retain assessment results for 2 years.',
+            },
+            {
+                'data_type': 'interview_notes',
+                'retention_days': 730,  # 2 years
+                'grace_period_days': 30,
+                'is_active': True,
+                'description': 'Retain interview notes for 2 years.',
+            },
+            {
+                'data_type': 'communication_logs',
+                'retention_days': 365,  # 1 year
+                'grace_period_days': 30,
+                'is_active': True,
+                'description': 'Retain communication logs for 1 year.',
+            },
+            {
+                'data_type': 'audit_logs',
+                'retention_days': 2555,  # 7 years (legal requirement)
+                'grace_period_days': 0,
+                'is_active': True,
+                'description': 'Retain audit logs for 7 years (legal requirement).',
+            },
+        ]
+
+        for policy_data in policies:
+            DataRetentionPolicy.objects.get_or_create(
+                data_type=policy_data['data_type'],
+                defaults=policy_data,
+            )
+
+        # Create consent records for candidates
+        consent_types = ['data_processing', 'marketing', 'eeo_collection']
+
+        for candidate in candidates[:5]:  # First 5 candidates
+            for consent_type in consent_types:
+                # Random chance of having each consent
+                if random.random() > 0.3:  # 70% chance
+                    GDPRService.record_consent(
+                        user=candidate.user,
+                        consent_type=consent_type,
+                        ip_address=f'192.168.1.{random.randint(1, 254)}',
+                        user_agent='Mozilla/5.0 (Test Browser)',
+                    )
+
+        # Create consent records for internal users
+        for internal_user in internal_users[:3]:
+            for consent_type in ['data_processing', 'marketing']:
+                GDPRService.record_consent(
+                    user=internal_user.user,
+                    consent_type=consent_type,
+                    ip_address=f'10.0.0.{random.randint(1, 254)}',
+                    user_agent='Mozilla/5.0 (Internal Browser)',
+                )
+
+        # Note: We do NOT create sample EEO data as it contains sensitive information
+        # EEO data should only be created by actual candidates through the proper flow
+
+    def create_onboarding_data(self, departments, job_levels):
+        """Create onboarding templates."""
+        # Engineering onboarding template
+        engineering_template = OnboardingTemplate.objects.create(
+            name='Engineering Onboarding',
+            description='Standard onboarding process for engineering hires',
+            department=departments[0],  # Engineering
+            job_level=None,  # Apply to all levels
+            is_active=True,
+            tasks=[
+                {
+                    'title': 'Complete I-9 Verification',
+                    'description': 'Submit I-9 form with required documentation (passport, driver license, SSN card)',
+                    'category': 'admin',
+                    'days_offset': 0,
+                    'assigned_to': 'candidate',
+                },
+                {
+                    'title': 'Sign Employee Handbook',
+                    'description': 'Review and sign the employee handbook acknowledgment',
+                    'category': 'admin',
+                    'days_offset': 0,
+                    'assigned_to': 'candidate',
+                },
+                {
+                    'title': 'Setup Workstation',
+                    'description': 'Configure laptop, development environment, and necessary software',
+                    'category': 'equipment',
+                    'days_offset': 1,
+                    'assigned_to': 'it',
+                },
+                {
+                    'title': 'Create Email and Slack Accounts',
+                    'description': 'Setup company email and add to relevant Slack channels',
+                    'category': 'equipment',
+                    'days_offset': 1,
+                    'assigned_to': 'it',
+                },
+                {
+                    'title': 'Welcome Team Meeting',
+                    'description': 'Meet the team and get introduced to ongoing projects',
+                    'category': 'meeting',
+                    'days_offset': 1,
+                    'assigned_to': 'buddy',
+                },
+                {
+                    'title': 'Review Codebase',
+                    'description': 'Clone repositories and review project structure',
+                    'category': 'training',
+                    'days_offset': 2,
+                    'assigned_to': 'buddy',
+                },
+                {
+                    'title': 'Security Training',
+                    'description': 'Complete mandatory security awareness training',
+                    'category': 'training',
+                    'days_offset': 3,
+                    'assigned_to': 'candidate',
+                },
+                {
+                    'title': 'First Code Review',
+                    'description': 'Complete first pull request and code review',
+                    'category': 'other',
+                    'days_offset': 7,
+                    'assigned_to': 'candidate',
+                },
+            ],
+            required_documents=['i9', 'w4', 'direct_deposit', 'emergency_contact'],
+            forms=['equipment_preferences', 'emergency_contact'],
+        )
+
+        # Product onboarding template
+        product_template = OnboardingTemplate.objects.create(
+            name='Product Team Onboarding',
+            description='Onboarding for product managers and designers',
+            department=departments[2] if len(departments) > 2 else departments[0],  # Product
+            job_level=None,
+            is_active=True,
+            tasks=[
+                {
+                    'title': 'Complete I-9 Verification',
+                    'description': 'Submit I-9 form with required documentation',
+                    'category': 'admin',
+                    'days_offset': 0,
+                    'assigned_to': 'candidate',
+                },
+                {
+                    'title': 'Sign Employee Handbook',
+                    'description': 'Review and sign employee handbook',
+                    'category': 'admin',
+                    'days_offset': 0,
+                    'assigned_to': 'candidate',
+                },
+                {
+                    'title': 'Setup Workstation',
+                    'description': 'Configure laptop and design/product tools',
+                    'category': 'equipment',
+                    'days_offset': 1,
+                    'assigned_to': 'it',
+                },
+                {
+                    'title': 'Product Roadmap Overview',
+                    'description': 'Review current product roadmap and priorities',
+                    'category': 'training',
+                    'days_offset': 1,
+                    'assigned_to': 'buddy',
+                },
+                {
+                    'title': 'Customer Journey Workshop',
+                    'description': 'Learn about user personas and customer journey maps',
+                    'category': 'training',
+                    'days_offset': 2,
+                    'assigned_to': 'buddy',
+                },
+                {
+                    'title': 'Meet Key Stakeholders',
+                    'description': 'Schedule 1:1s with engineering, sales, and customer success leads',
+                    'category': 'meeting',
+                    'days_offset': 3,
+                    'assigned_to': 'candidate',
+                },
+            ],
+            required_documents=['i9', 'w4', 'direct_deposit'],
+            forms=['equipment_preferences', 'emergency_contact'],
+        )
+
+        # Generic template for all departments
+        generic_template = OnboardingTemplate.objects.create(
+            name='General Employee Onboarding',
+            description='Standard onboarding for all new hires',
+            department=None,  # No department = applies to all
+            job_level=None,
+            is_active=True,
+            tasks=[
+                {
+                    'title': 'Complete I-9 Verification',
+                    'description': 'Submit I-9 form with required documentation',
+                    'category': 'admin',
+                    'days_offset': 0,
+                    'assigned_to': 'candidate',
+                },
+                {
+                    'title': 'Sign Employee Handbook',
+                    'description': 'Review and sign employee handbook',
+                    'category': 'admin',
+                    'days_offset': 0,
+                    'assigned_to': 'candidate',
+                },
+                {
+                    'title': 'HR Orientation',
+                    'description': 'Company culture, benefits, policies overview',
+                    'category': 'meeting',
+                    'days_offset': 1,
+                    'assigned_to': 'hr',
+                },
+                {
+                    'title': 'Setup Workstation',
+                    'description': 'Configure laptop and necessary software',
+                    'category': 'equipment',
+                    'days_offset': 1,
+                    'assigned_to': 'it',
+                },
+            ],
+            required_documents=['i9', 'w4', 'direct_deposit'],
+            forms=['emergency_contact'],
+        )
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f'Created {OnboardingTemplate.objects.count()} onboarding templates'
+            )
+        )
+
+    def create_integrations(self):
+        """Create sample integrations."""
+        from apps.integrations.models import Integration
+
+        # Sample integrations (inactive by default as they have no real credentials)
+        integrations_data = [
+            {
+                'provider': 'indeed',
+                'category': 'job_board',
+                'name': 'Indeed US',
+                'is_active': False,
+                'config': '{"api_key": "sample_key", "employer_id": "12345"}',
+                'sync_status': 'idle',
+                'metadata': {'region': 'US'},
+            },
+            {
+                'provider': 'linkedin',
+                'category': 'job_board',
+                'name': 'LinkedIn Jobs',
+                'is_active': False,
+                'config': '{"client_id": "sample_client_id", "client_secret": "sample_secret"}',
+                'sync_status': 'idle',
+                'metadata': {'api_version': 'v2'},
+            },
+            {
+                'provider': 'glassdoor',
+                'category': 'job_board',
+                'name': 'Glassdoor',
+                'is_active': False,
+                'config': '{"partner_id": "12345", "api_key": "sample_key"}',
+                'sync_status': 'idle',
+                'metadata': {},
+            },
+            {
+                'provider': 'bamboo_hr',
+                'category': 'hris',
+                'name': 'BambooHR',
+                'is_active': False,
+                'config': '{"subdomain": "company", "api_key": "sample_key"}',
+                'sync_status': 'idle',
+                'metadata': {},
+            },
+            {
+                'provider': 'workday',
+                'category': 'hris',
+                'name': 'Workday HRIS',
+                'is_active': False,
+                'config': '{"tenant_url": "https://example.workday.com", "username": "user", "password": "pass"}',
+                'sync_status': 'idle',
+                'metadata': {},
+            },
+        ]
+
+        for data in integrations_data:
+            Integration.objects.get_or_create(
+                provider=data['provider'],
+                name=data['name'],
+                defaults={
+                    'category': data['category'],
+                    'is_active': data['is_active'],
+                    'config': data['config'],
+                    'sync_status': data['sync_status'],
+                    'metadata': data['metadata'],
+                },
+            )
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f'Created {Integration.objects.count()} integrations'
+            )
+        )
 
     def print_credentials(self):
         """Print login credentials for testing."""
