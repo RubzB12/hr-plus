@@ -8,7 +8,7 @@ from rest_framework.response import Response
 
 from apps.accounts.permissions import IsInternalUser
 
-from .selectors import ExecutiveDashboardSelector, ReportSelector
+from .selectors import DashboardSelector, ExecutiveDashboardSelector, ReportSelector
 from .serializers import DateRangeSerializer, GenerateReportSerializer, ScheduleReportSerializer
 from .services import ReportScheduleService, ReportService
 
@@ -29,6 +29,18 @@ class ExecutiveDashboardView(generics.GenericAPIView):
             end_date=serializer.validated_data.get('end_date'),
             department_id=serializer.validated_data.get('department_id'),
         )
+
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class RecruiterDashboardView(generics.GenericAPIView):
+    """View for recruiter dashboard metrics."""
+
+    permission_classes = [IsAuthenticated, IsInternalUser]
+
+    def get(self, request):
+        """Get recruiter dashboard data."""
+        data = DashboardSelector.get_recruiter_dashboard(request.user)
 
         return Response(data, status=status.HTTP_200_OK)
 

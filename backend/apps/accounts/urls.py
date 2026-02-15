@@ -40,4 +40,5 @@ urlpatterns = [
     path('auth/', include(auth_urlpatterns)),
     path('candidates/', include(candidate_urlpatterns)),
     path('internal/', include(router.urls)),
+    path('internal/candidates/search/', views.CandidateSearchView.as_view(), name='candidate-search'),
 ]

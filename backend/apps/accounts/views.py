@@ -345,3 +345,50 @@ class RoleViewSet(viewsets.ModelViewSet):
             from apps.core.exceptions import BusinessValidationError
             raise BusinessValidationError('System roles cannot be deleted.')
         instance.delete()
+
+
+class CandidateSearchView(generics.GenericAPIView):
+    """Search candidates using Elasticsearch with database fallback."""
+
+    permission_classes = [IsAuthenticated, IsInternalUser]
+
+    def get(self, request):
+        """
+        Search candidates with filters.
+
+        Query params:
+        - q: Search query (name, email, skills, resume)
+        - skills: Comma-separated list of skills
+        - location_city: City filter
+        - location_country: Country filter
+        - experience_min: Minimum years of experience
+        - experience_max: Maximum years of experience
+        - work_authorization: Work authorization status
+        - source: Candidate source
+        - salary_max: Maximum salary budget
+        - limit: Results limit (default 100)
+        """
+        from .search import CandidateSearchService
+
+        query = request.query_params.get('q', '')
+        skills_str = request.query_params.get('skills', '')
+        skills = [s.strip() for s in skills_str.split(',') if s.strip()] if skills_str else None
+
+        candidates = CandidateSearchService.search(
+            query=query,
+            skills=skills,
+            location_city=request.query_params.get('location_city'),
+            location_country=request.query_params.get('location_country'),
+            experience_min=int(request.query_params.get('experience_min')) if request.query_params.get('experience_min') else None,
+            experience_max=int(request.query_params.get('experience_max')) if request.query_params.get('experience_max') else None,
+            work_authorization=request.query_params.get('work_authorization'),
+            source=request.query_params.get('source'),
+            salary_max=int(request.query_params.get('salary_max')) if request.query_params.get('salary_max') else None,
+            limit=int(request.query_params.get('limit', 100)),
+        )
+
+        serializer = CandidateProfileSerializer(candidates, many=True)
+        return Response({
+            'count': len(candidates),
+            'results': serializer.data,
+        })

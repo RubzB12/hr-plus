@@ -182,3 +182,99 @@ export async function getRecruiterDashboard() {
   if (!res.ok) throw new Error('Failed to fetch dashboard')
   return res.json()
 }
+
+export async function getInterviews(params?: {
+  status?: string
+  from_date?: string
+  to_date?: string
+}) {
+  const searchParams = new URLSearchParams(
+    Object.entries(params ?? {}).filter(([, v]) => v != null) as [
+      string,
+      string,
+    ][]
+  )
+  const res = await fetch(
+    `${API_URL}/api/v1/internal/interviews/?${searchParams}`,
+    {
+      headers: await getAuthHeaders(),
+      cache: 'no-store',
+    }
+  )
+
+  if (!res.ok) throw new Error('Failed to fetch interviews')
+  return res.json()
+}
+
+export async function getInterviewDetail(id: string) {
+  const res = await fetch(`${API_URL}/api/v1/internal/interviews/${id}/`, {
+    headers: await getAuthHeaders(),
+    cache: 'no-store',
+  })
+
+  if (!res.ok) throw new Error('Failed to fetch interview')
+  return res.json()
+}
+
+export async function getInterviewScorecards(interviewId: string) {
+  const res = await fetch(
+    `${API_URL}/api/v1/internal/interviews/${interviewId}/scorecards/`,
+    {
+      headers: await getAuthHeaders(),
+      cache: 'no-store',
+    }
+  )
+
+  if (!res.ok) {
+    if (res.status === 403) {
+      // User must submit their own scorecard first
+      return { restricted: true, scorecards: [] }
+    }
+    throw new Error('Failed to fetch scorecards')
+  }
+  const scorecards = await res.json()
+  return { restricted: false, scorecards }
+}
+
+export async function getOffers(params?: {
+  status?: string
+  application?: string
+  page?: string
+}) {
+  const searchParams = new URLSearchParams(
+    Object.entries(params ?? {}).filter(([, v]) => v != null) as [
+      string,
+      string,
+    ][]
+  )
+  const res = await fetch(
+    `${API_URL}/api/v1/internal/offers/?${searchParams}`,
+    {
+      headers: await getAuthHeaders(),
+      cache: 'no-store',
+    }
+  )
+
+  if (!res.ok) throw new Error('Failed to fetch offers')
+  return res.json()
+}
+
+export async function getOfferDetail(id: string) {
+  const res = await fetch(`${API_URL}/api/v1/internal/offers/${id}/`, {
+    headers: await getAuthHeaders(),
+    cache: 'no-store',
+  })
+
+  if (!res.ok) throw new Error('Failed to fetch offer')
+  return res.json()
+}
+
+export async function getJobLevels() {
+  const res = await fetch(`${API_URL}/api/v1/internal/job-levels/`, {
+    headers: await getAuthHeaders(),
+    next: { revalidate: 600 },
+  })
+
+  if (!res.ok) throw new Error('Failed to fetch job levels')
+  return res.json()
+}

@@ -7,6 +7,7 @@ from .views import (
     GenerateReportView,
     InterviewerCalibrationView,
     PipelineAnalyticsView,
+    RecruiterDashboardView,
     ScheduleReportView,
     SourceEffectivenessView,
     TimeToFillAnalyticsView,
@@ -18,6 +19,11 @@ urlpatterns = [
         'dashboard/executive/',
         ExecutiveDashboardView.as_view(),
         name='executive-dashboard',
+    ),
+    path(
+        'dashboard/recruiter/',
+        RecruiterDashboardView.as_view(),
+        name='recruiter-dashboard',
     ),
     # Analytics endpoints
     path(
