@@ -19,13 +19,15 @@ const REMOTE_POLICIES = [
 
 interface JobFiltersProps {
   categories: JobCategory[]
+  locations: Array<{ id: string; name: string }>
 }
 
-export default function JobFilters({ categories }: JobFiltersProps) {
+export default function JobFilters({ categories, locations }: JobFiltersProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
   const currentDepartment = searchParams.get('department') ?? ''
+  const currentLocation = searchParams.get('location') ?? ''
   const currentType = searchParams.get('employment_type') ?? ''
   const currentRemote = searchParams.get('remote_policy') ?? ''
 
@@ -48,7 +50,7 @@ export default function JobFilters({ categories }: JobFiltersProps) {
   )
 
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-3">
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
       <select
         value={currentDepartment}
         onChange={(e) => updateFilter('department', e.target.value)}
@@ -59,6 +61,20 @@ export default function JobFilters({ categories }: JobFiltersProps) {
         {categories.map((cat) => (
           <option key={cat.department__id} value={cat.department__name}>
             {cat.department__name} ({cat.job_count})
+          </option>
+        ))}
+      </select>
+
+      <select
+        value={currentLocation}
+        onChange={(e) => updateFilter('location', e.target.value)}
+        aria-label="Filter by location"
+        className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+      >
+        <option value="">All Locations</option>
+        {locations.map((loc) => (
+          <option key={loc.id} value={loc.name}>
+            {loc.name}
           </option>
         ))}
       </select>
