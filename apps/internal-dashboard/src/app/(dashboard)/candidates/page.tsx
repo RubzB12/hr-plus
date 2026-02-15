@@ -339,12 +339,14 @@ export default function CandidatesPage() {
                   )}
 
                   <div className="flex items-center gap-2">
-                    <Button size="sm" className="flex-1">
-                      View Profile
+                    <Button size="sm" className="flex-1" asChild>
+                      <a href={`/candidates/${candidate.id}`}>View Profile</a>
                     </Button>
                     {candidate.resume_file && (
-                      <Button size="sm" variant="outline">
-                        <FileText className="h-4 w-4" />
+                      <Button size="sm" variant="outline" asChild>
+                        <a href={candidate.resume_file} target="_blank" rel="noopener noreferrer">
+                          <FileText className="h-4 w-4" />
+                        </a>
                       </Button>
                     )}
                   </div>

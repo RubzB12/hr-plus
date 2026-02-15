@@ -7,13 +7,19 @@ const API_URL = process.env.DJANGO_API_URL
 async function getAuthHeaders() {
   const cookieStore = await cookies()
   const sessionCookie = cookieStore.get('session')
+
+  console.log('🔍 Cookie Debug:', {
+    sessionCookie,
+    allCookies: cookieStore.getAll(),
+  })
+
   if (!sessionCookie) {
-    throw new Error('Unauthorized')
+    throw new Error('Unauthorized - No session cookie found')
   }
 
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${sessionCookie.value}`,
+    Cookie: `sessionid=${sessionCookie.value}`,
   }
 }
 
@@ -179,7 +185,16 @@ export async function getRecruiterDashboard() {
     }
   )
 
-  if (!res.ok) throw new Error('Failed to fetch dashboard')
+  if (!res.ok) {
+    const errorText = await res.text()
+    console.error('Dashboard API Error:', {
+      status: res.status,
+      statusText: res.statusText,
+      body: errorText,
+      url: `${API_URL}/api/v1/internal/analytics/dashboard/recruiter/`,
+    })
+    throw new Error(`Failed to fetch dashboard: ${res.status} ${res.statusText}`)
+  }
   return res.json()
 }
 
@@ -276,5 +291,45 @@ export async function getJobLevels() {
   })
 
   if (!res.ok) throw new Error('Failed to fetch job levels')
+  return res.json()
+}
+
+export async function searchCandidates(params?: {
+  q?: string
+  skills?: string
+  location_city?: string
+  location_country?: string
+  experience_min?: string
+  experience_max?: string
+  work_authorization?: string
+  source?: string
+  limit?: string
+}) {
+  const searchParams = new URLSearchParams(
+    Object.entries(params ?? {}).filter(([, v]) => v != null && v !== '') as [
+      string,
+      string,
+    ][]
+  )
+
+  const res = await fetch(
+    `${API_URL}/api/v1/internal/candidates/search/?${searchParams}`,
+    {
+      headers: await getAuthHeaders(),
+      cache: 'no-store',
+    }
+  )
+
+  if (!res.ok) throw new Error('Failed to search candidates')
+  return res.json()
+}
+
+export async function getCandidateDetail(id: string) {
+  const res = await fetch(`${API_URL}/api/v1/internal/candidates/${id}/`, {
+    headers: await getAuthHeaders(),
+    cache: 'no-store',
+  })
+
+  if (!res.ok) throw new Error('Failed to fetch candidate')
   return res.json()
 }

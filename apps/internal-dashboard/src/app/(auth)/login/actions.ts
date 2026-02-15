@@ -41,10 +41,16 @@ export async function loginAction(
 
   // Extract session cookie from Django response and set it
   const setCookieHeader = response.headers.get('set-cookie')
+  console.log('🔐 Login Debug:', {
+    setCookieHeader,
+    allHeaders: Array.from(response.headers.entries()),
+  })
+
   if (setCookieHeader) {
     const cookieStore = await cookies()
     // Parse the sessionid from Django's set-cookie header
     const sessionMatch = setCookieHeader.match(/sessionid=([^;]+)/)
+    console.log('🔐 Session Match:', sessionMatch)
     if (sessionMatch) {
       cookieStore.set('session', sessionMatch[1], {
         httpOnly: true,
@@ -53,7 +59,12 @@ export async function loginAction(
         path: '/',
         maxAge: 86400, // 24 hours
       })
+      console.log('✅ Session cookie set:', sessionMatch[1])
+    } else {
+      console.error('❌ No sessionid found in Set-Cookie header')
     }
+  } else {
+    console.error('❌ No Set-Cookie header in response')
   }
 
   redirect('/dashboard')

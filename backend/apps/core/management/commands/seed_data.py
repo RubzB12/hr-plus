@@ -427,6 +427,20 @@ class Command(BaseCommand):
             superuser.set_password('admin123')
             superuser.save()
 
+        # Create InternalUser profile for admin if it doesn't exist
+        admin_internal, admin_created = InternalUser.objects.get_or_create(
+            user=superuser,
+            defaults={
+                'employee_id': 'EMP000',
+                'title': 'System Administrator',
+                'department': departments[7] if len(departments) > 7 else None,  # People & Culture
+            },
+        )
+
+        # Assign Super Admin role to admin
+        super_admin_role = Role.objects.get(name='Super Admin')
+        admin_internal.roles.add(super_admin_role)
+
         # Create internal users
         users_data = [
             {
@@ -717,13 +731,15 @@ class Command(BaseCommand):
         skills = random.sample(all_skills, num_skills)
 
         for skill_name in skills:
-            Skill.objects.create(
+            Skill.objects.get_or_create(
                 candidate=candidate,
                 name=skill_name,
-                proficiency=random.choice(
-                    ['intermediate', 'advanced', 'expert']
-                ),
-                years_experience=random.randint(1, 8),
+                defaults={
+                    'proficiency': random.choice(
+                        ['intermediate', 'advanced', 'expert']
+                    ),
+                    'years_experience': random.randint(1, 8),
+                },
             )
 
     def create_requisitions(
