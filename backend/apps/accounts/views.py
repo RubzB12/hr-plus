@@ -11,18 +11,22 @@ from apps.core.utils import get_client_ip
 from .models import (
     CandidateProfile,
     Department,
+    Education,
     InternalUser,
     JobLevel,
     Location,
     Role,
+    Skill,
     Team,
     User,
+    WorkExperience,
 )
 from .permissions import IsCandidate, IsInternalUser
 from .serializers import (
     CandidateProfileSerializer,
     CandidateProfileUpdateSerializer,
     DepartmentSerializer,
+    EducationSerializer,
     InternalUserSerializer,
     JobLevelSerializer,
     LocationSerializer,
@@ -32,9 +36,12 @@ from .serializers import (
     PasswordResetRequestSerializer,
     RegisterSerializer,
     RoleSerializer,
+    SkillSerializer,
     TeamSerializer,
+    WorkExperienceSerializer,
 )
 from .services import AuthService, UserService
+from .candidate_services import CandidateProfileService
 
 
 class RegisterView(APIView):
@@ -142,9 +149,120 @@ class CandidateProfileView(generics.RetrieveUpdateAPIView):
         return CandidateProfileSerializer
 
     def get_object(self):
-        return CandidateProfile.objects.select_related('user').get(
-            user=self.request.user
+        return CandidateProfile.objects.select_related('user').prefetch_related(
+            'experiences', 'education', 'skills'
+        ).get(user=self.request.user)
+
+
+class ResumeUploadView(APIView):
+    """POST /api/v1/candidates/resume/ — Upload and parse resume."""
+
+    permission_classes = [IsAuthenticated, IsCandidate]
+
+    def post(self, request):
+        resume_file = request.FILES.get('resume')
+        if not resume_file:
+            return Response(
+                {'detail': 'No resume file provided.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate file type
+        allowed_extensions = ['.pdf', '.doc', '.docx', '.txt']
+        file_ext = resume_file.name.lower().split('.')[-1]
+        if f'.{file_ext}' not in allowed_extensions:
+            return Response(
+                {'detail': f'File type not supported. Allowed: {", ".join(allowed_extensions)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate file size (max 5MB)
+        max_size = 5 * 1024 * 1024  # 5MB
+        if resume_file.size > max_size:
+            return Response(
+                {'detail': 'File too large. Maximum size is 5MB.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        candidate = CandidateProfile.objects.get(user=request.user)
+        auto_populate = request.data.get('auto_populate', 'true').lower() == 'true'
+
+        # Upload and parse
+        candidate = CandidateProfileService.upload_and_parse_resume(
+            candidate=candidate,
+            resume_file=resume_file,
+            auto_populate=auto_populate
         )
+
+        # If auto_populate is enabled, create records from parsed data
+        if auto_populate:
+            counts = CandidateProfileService.auto_populate_from_resume(candidate)
+            return Response({
+                'detail': 'Resume uploaded and parsed successfully.',
+                'resume_url': candidate.resume_file.url if candidate.resume_file else None,
+                'parsed_data': candidate.resume_parsed,
+                'populated': counts,
+            })
+
+        return Response({
+            'detail': 'Resume uploaded successfully.',
+            'resume_url': candidate.resume_file.url if candidate.resume_file else None,
+            'parsed_data': candidate.resume_parsed,
+        })
+
+
+class WorkExperienceViewSet(viewsets.ModelViewSet):
+    """CRUD for candidate work experience."""
+
+    permission_classes = [IsAuthenticated, IsCandidate]
+    serializer_class = WorkExperienceSerializer
+
+    def get_queryset(self):
+        """Return only the authenticated candidate's work experiences."""
+        return WorkExperience.objects.filter(
+            candidate__user=self.request.user
+        ).order_by('-start_date')
+
+    def perform_create(self, serializer):
+        """Automatically associate with the authenticated candidate."""
+        candidate = CandidateProfile.objects.get(user=self.request.user)
+        serializer.save(candidate=candidate)
+
+
+class EducationViewSet(viewsets.ModelViewSet):
+    """CRUD for candidate education."""
+
+    permission_classes = [IsAuthenticated, IsCandidate]
+    serializer_class = EducationSerializer
+
+    def get_queryset(self):
+        """Return only the authenticated candidate's education records."""
+        return Education.objects.filter(
+            candidate__user=self.request.user
+        ).order_by('-start_date')
+
+    def perform_create(self, serializer):
+        """Automatically associate with the authenticated candidate."""
+        candidate = CandidateProfile.objects.get(user=self.request.user)
+        serializer.save(candidate=candidate)
+
+
+class SkillViewSet(viewsets.ModelViewSet):
+    """CRUD for candidate skills."""
+
+    permission_classes = [IsAuthenticated, IsCandidate]
+    serializer_class = SkillSerializer
+
+    def get_queryset(self):
+        """Return only the authenticated candidate's skills."""
+        return Skill.objects.filter(
+            candidate__user=self.request.user
+        ).order_by('name')
+
+    def perform_create(self, serializer):
+        """Automatically associate with the authenticated candidate."""
+        candidate = CandidateProfile.objects.get(user=self.request.user)
+        serializer.save(candidate=candidate)
 
 
 # --- Internal admin views ---

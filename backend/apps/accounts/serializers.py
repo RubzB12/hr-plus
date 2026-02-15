@@ -106,6 +106,33 @@ class RoleSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'is_system']
 
 
+class WorkExperienceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WorkExperience
+        fields = [
+            'id', 'company_name', 'title', 'start_date', 'end_date',
+            'is_current', 'description', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class EducationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Education
+        fields = [
+            'id', 'institution', 'degree', 'field_of_study',
+            'start_date', 'end_date', 'gpa', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class SkillSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Skill
+        fields = ['id', 'name', 'proficiency', 'years_experience']
+        read_only_fields = ['id']
+
+
 class CandidateProfileListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for candidate lists (e.g., talent pools)."""
 
@@ -128,6 +155,9 @@ class CandidateProfileListSerializer(serializers.ModelSerializer):
 class CandidateProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     completeness = serializers.SerializerMethodField()
+    experiences = WorkExperienceSerializer(many=True, read_only=True)
+    education = EducationSerializer(many=True, read_only=True)
+    skills = SkillSerializer(many=True, read_only=True)
 
     class Meta:
         model = CandidateProfile
@@ -137,6 +167,7 @@ class CandidateProfileSerializer(serializers.ModelSerializer):
             'linkedin_url', 'portfolio_url', 'preferred_salary_min',
             'preferred_salary_max', 'preferred_job_types',
             'profile_completeness', 'source', 'completeness',
+            'experiences', 'education', 'skills',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'user', 'resume_parsed', 'profile_completeness', 'created_at', 'updated_at']
@@ -170,33 +201,6 @@ class CandidateProfileUpdateSerializer(serializers.ModelSerializer):
         if first_name is not None or last_name is not None:
             instance.user.save(update_fields=['first_name', 'last_name'])
         return super().update(instance, validated_data)
-
-
-class WorkExperienceSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = WorkExperience
-        fields = [
-            'id', 'company_name', 'title', 'start_date', 'end_date',
-            'is_current', 'description', 'created_at', 'updated_at',
-        ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
-
-
-class EducationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Education
-        fields = [
-            'id', 'institution', 'degree', 'field_of_study',
-            'start_date', 'end_date', 'gpa', 'created_at', 'updated_at',
-        ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
-
-
-class SkillSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Skill
-        fields = ['id', 'name', 'proficiency', 'years_experience']
-        read_only_fields = ['id']
 
 
 class DepartmentSerializer(serializers.ModelSerializer):

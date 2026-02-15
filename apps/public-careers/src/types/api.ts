@@ -64,6 +64,70 @@ export interface CandidateApplicationDetail extends CandidateApplication {
   events: ApplicationEvent[]
 }
 
+export interface User {
+  id: string
+  email: string
+  first_name: string
+  last_name: string
+  is_internal: boolean
+  date_joined: string
+}
+
+export interface WorkExperience {
+  id: string
+  company_name: string
+  title: string
+  start_date: string
+  end_date: string | null
+  is_current: boolean
+  description: string
+  created_at: string
+  updated_at: string
+}
+
+export interface Education {
+  id: string
+  institution: string
+  degree: string
+  field_of_study: string
+  start_date: string
+  end_date: string | null
+  gpa: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface Skill {
+  id: string
+  name: string
+  proficiency: 'beginner' | 'intermediate' | 'advanced' | 'expert' | ''
+  years_experience: number | null
+}
+
+export interface CandidateProfile {
+  id: string
+  user: User
+  phone: string
+  location_city: string
+  location_country: string
+  work_authorization: string
+  resume_file: string | null
+  resume_parsed: Record<string, any> | null
+  linkedin_url: string
+  portfolio_url: string
+  preferred_salary_min: string | null
+  preferred_salary_max: string | null
+  preferred_job_types: string[]
+  profile_completeness: number
+  source: string
+  completeness: number
+  experiences: WorkExperience[]
+  education: Education[]
+  skills: Skill[]
+  created_at: string
+  updated_at: string
+}
+
 export interface UserProfile {
   id: string
   email: string

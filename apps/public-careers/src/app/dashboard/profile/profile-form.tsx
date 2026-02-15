@@ -2,18 +2,17 @@
 
 import { useActionState } from 'react'
 import { updateProfileAction, type ProfileState } from './actions'
-import type { UserProfile } from '@/types/api'
+import type { CandidateProfile } from '@/types/api'
 
 const initialState: ProfileState = { success: false }
 
-export function ProfileForm({ profile }: { profile: UserProfile }) {
+export function ProfileForm({ profile }: { profile: CandidateProfile }) {
   const [state, formAction, isPending] = useActionState(
     updateProfileAction,
     initialState
   )
 
-  const cp = profile.candidate_profile
-  const completeness = cp.profile_completeness ?? 0
+  const completeness = profile.profile_completeness ?? 0
 
   return (
     <div className="space-y-6">
@@ -94,7 +93,7 @@ export function ProfileForm({ profile }: { profile: UserProfile }) {
                   name="first_name"
                   type="text"
                   required
-                  defaultValue={profile.first_name}
+                  defaultValue={profile.user.first_name}
                   className="block w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
                 {state.errors?.first_name && (
@@ -112,7 +111,7 @@ export function ProfileForm({ profile }: { profile: UserProfile }) {
                   name="last_name"
                   type="text"
                   required
-                  defaultValue={profile.last_name}
+                  defaultValue={profile.user.last_name}
                   className="block w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
                 {state.errors?.last_name && (
@@ -131,7 +130,7 @@ export function ProfileForm({ profile }: { profile: UserProfile }) {
                 id="email"
                 type="email"
                 disabled
-                value={profile.email}
+                value={profile.user.email}
                 className="block w-full rounded-lg border border-border bg-muted px-3 py-2.5 text-sm text-muted-foreground cursor-not-allowed"
               />
               <p className="mt-1.5 text-xs text-muted-foreground">
@@ -148,7 +147,7 @@ export function ProfileForm({ profile }: { profile: UserProfile }) {
                 name="phone"
                 type="tel"
                 placeholder="+1 (555) 123-4567"
-                defaultValue={cp.phone}
+                defaultValue={profile.phone}
                 className="block w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
               {state.errors?.phone && (
@@ -178,7 +177,7 @@ export function ProfileForm({ profile }: { profile: UserProfile }) {
                   name="location_city"
                   type="text"
                   placeholder="San Francisco"
-                  defaultValue={cp.location_city}
+                  defaultValue={profile.location_city}
                   className="block w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </div>
@@ -191,7 +190,7 @@ export function ProfileForm({ profile }: { profile: UserProfile }) {
                   name="location_country"
                   type="text"
                   placeholder="United States"
-                  defaultValue={cp.location_country}
+                  defaultValue={profile.location_country}
                   className="block w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </div>
@@ -206,7 +205,7 @@ export function ProfileForm({ profile }: { profile: UserProfile }) {
                 name="work_authorization"
                 type="text"
                 placeholder="e.g. US Citizen, Work Visa, Green Card"
-                defaultValue={cp.work_authorization}
+                defaultValue={profile.work_authorization}
                 className="block w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
               <p className="mt-1.5 text-xs text-muted-foreground">
@@ -241,7 +240,7 @@ export function ProfileForm({ profile }: { profile: UserProfile }) {
                   name="linkedin_url"
                   type="url"
                   placeholder="https://linkedin.com/in/yourprofile"
-                  defaultValue={cp.linkedin_url}
+                  defaultValue={profile.linkedin_url}
                   className="block w-full rounded-lg border border-border bg-background pl-10 pr-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </div>
@@ -267,7 +266,7 @@ export function ProfileForm({ profile }: { profile: UserProfile }) {
                   name="portfolio_url"
                   type="url"
                   placeholder="https://yourportfolio.com"
-                  defaultValue={cp.portfolio_url}
+                  defaultValue={profile.portfolio_url}
                   className="block w-full rounded-lg border border-border bg-background pl-10 pr-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </div>

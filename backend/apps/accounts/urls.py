@@ -13,6 +13,12 @@ router.register(r'locations', views.LocationViewSet, basename='location')
 router.register(r'job-levels', views.JobLevelViewSet, basename='job-level')
 router.register(r'roles', views.RoleViewSet, basename='role')
 
+# Candidate data routers
+candidate_router = DefaultRouter()
+candidate_router.register(r'experiences', views.WorkExperienceViewSet, basename='candidate-experience')
+candidate_router.register(r'education', views.EducationViewSet, basename='candidate-education')
+candidate_router.register(r'skills', views.SkillViewSet, basename='candidate-skill')
+
 # Auth endpoints
 auth_urlpatterns = [
     path('register/', views.RegisterView.as_view(), name='auth-register'),
@@ -26,6 +32,8 @@ auth_urlpatterns = [
 # Candidate endpoints
 candidate_urlpatterns = [
     path('profile/', views.CandidateProfileView.as_view(), name='candidate-profile'),
+    path('resume/', views.ResumeUploadView.as_view(), name='candidate-resume-upload'),
+    path('', include(candidate_router.urls)),
 ]
 
 urlpatterns = [
