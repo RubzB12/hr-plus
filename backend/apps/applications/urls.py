@@ -11,6 +11,11 @@ router.register(
     views.InternalApplicationViewSet,
     basename='internal-application',
 )
+router.register(
+    r'internal/talent-pools',
+    views.TalentPoolViewSet,
+    basename='talent-pool',
+)
 
 urlpatterns = [
     # Candidate-facing endpoints

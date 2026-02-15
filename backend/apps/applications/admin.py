@@ -2,7 +2,14 @@
 
 from django.contrib import admin
 
-from .models import Application, ApplicationEvent, CandidateNote, RejectionReason, Tag
+from .models import (
+    Application,
+    ApplicationEvent,
+    CandidateNote,
+    RejectionReason,
+    Tag,
+    TalentPool,
+)
 
 
 class ApplicationEventInline(admin.TabularInline):
@@ -48,3 +55,12 @@ class CandidateNoteAdmin(admin.ModelAdmin):
     list_display = ['application', 'author', 'is_private', 'created_at']
     list_filter = ['is_private']
     raw_id_fields = ['application', 'author']
+
+
+@admin.register(TalentPool)
+class TalentPoolAdmin(admin.ModelAdmin):
+    list_display = ['name', 'owner', 'is_dynamic', 'created_at']
+    list_filter = ['is_dynamic']
+    search_fields = ['name', 'description']
+    raw_id_fields = ['owner']
+    filter_horizontal = ['candidates']

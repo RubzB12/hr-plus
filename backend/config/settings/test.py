@@ -48,3 +48,12 @@ LOGGING = {
     'handlers': {},
     'root': {'level': 'CRITICAL'},
 }
+
+# Disable Elasticsearch during tests
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': 'localhost:9200',
+    },
+}
+ELASTICSEARCH_DSL_AUTOSYNC = False
+ELASTICSEARCH_DSL_AUTO_REFRESH = False

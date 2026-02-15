@@ -154,3 +154,86 @@ class Notification(BaseModel):
 
     def __str__(self):
         return f'{self.title} for {self.recipient.get_full_name()}'
+
+
+class MessageThread(BaseModel):
+    """Conversation thread between users (internal and/or candidates)."""
+
+    subject = models.CharField(max_length=200, blank=True)
+    participants = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name='message_threads',
+    )
+    application = models.ForeignKey(
+        'applications.Application',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='message_threads',
+        help_text='If thread is related to a specific application',
+    )
+    is_archived = models.BooleanField(default=False)
+    archived_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+        indexes = [
+            models.Index(fields=['-updated_at']),
+            models.Index(fields=['application', '-updated_at']),
+        ]
+
+    def __str__(self):
+        participant_count = self.participants.count()
+        return f'Thread: {self.subject or "No subject"} ({participant_count} participants)'
+
+
+class Message(BaseModel):
+    """Individual message within a thread."""
+
+    thread = models.ForeignKey(
+        MessageThread,
+        on_delete=models.CASCADE,
+        related_name='messages',
+    )
+    sender = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='sent_messages',
+    )
+    body = models.TextField()
+    attachments = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='List of attachment URLs/metadata',
+    )
+    read_by = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Dict of user_id: timestamp when message was read',
+    )
+    is_system_message = models.BooleanField(
+        default=False,
+        help_text='System-generated message (e.g., "John moved application to Interview")',
+    )
+
+    class Meta:
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['thread', 'created_at']),
+            models.Index(fields=['sender', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f'Message from {self.sender.get_full_name()} in {self.thread}'
+
+    def mark_as_read(self, user):
+        """Mark message as read by a user."""
+        from django.utils import timezone
+
+        if str(user.id) not in self.read_by:
+            self.read_by[str(user.id)] = timezone.now().isoformat()
+            self.save(update_fields=['read_by'])
+
+    def is_read_by(self, user) -> bool:
+        """Check if user has read this message."""
+        return str(user.id) in self.read_by

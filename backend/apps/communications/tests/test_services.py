@@ -5,8 +5,8 @@ from django.utils import timezone
 
 from apps.accounts.tests.factories import UserFactory
 from apps.applications.tests.factories import ApplicationFactory
-from apps.communications.models import EmailLog, EmailTemplate, Notification
-from apps.communications.services import EmailService, NotificationService, TemplateService
+from apps.communications.models import EmailLog, EmailTemplate, Message, MessageThread, Notification
+from apps.communications.services import EmailService, MessagingService, NotificationService, TemplateService
 from apps.core.exceptions import BusinessValidationError
 
 
@@ -286,3 +286,439 @@ class TestNotificationService:
         count = NotificationService.get_unread_count(user)
 
         assert count == 2
+
+
+@pytest.mark.django_db
+class TestMessagingService:
+    """Tests for MessagingService."""
+
+    def test_create_thread_success(self):
+        """Message thread is created with participants."""
+        user1 = UserFactory()
+        user2 = UserFactory()
+        creator = UserFactory()
+
+        thread = MessagingService.create_thread(
+            subject='Test Thread',
+            participants=[user1, user2],
+            created_by=creator,
+        )
+
+        assert thread.id is not None
+        assert thread.subject == 'Test Thread'
+        assert thread.participants.count() == 3  # user1, user2, and creator
+        assert user1 in thread.participants.all()
+        assert user2 in thread.participants.all()
+        assert creator in thread.participants.all()
+
+    def test_create_thread_no_participants(self):
+        """Creating thread without participants raises error."""
+        creator = UserFactory()
+
+        with pytest.raises(BusinessValidationError, match='at least one participant'):
+            MessagingService.create_thread(
+                subject='Test',
+                participants=[],
+                created_by=creator,
+            )
+
+    def test_create_thread_single_participant(self):
+        """Creating thread with single participant raises error."""
+        user1 = UserFactory()
+        creator = UserFactory()
+
+        with pytest.raises(BusinessValidationError, match='at least two participants'):
+            MessagingService.create_thread(
+                subject='Test',
+                participants=[user1],
+                created_by=creator,
+            )
+
+    def test_create_thread_with_application(self):
+        """Thread can be linked to an application."""
+        user1 = UserFactory()
+        user2 = UserFactory()
+        application = ApplicationFactory()
+
+        thread = MessagingService.create_thread(
+            subject='About Application',
+            participants=[user1, user2],
+            application=application,
+            created_by=user1,
+        )
+
+        assert thread.application == application
+
+    def test_send_message_success(self):
+        """Message is sent successfully."""
+        user1 = UserFactory()
+        user2 = UserFactory()
+
+        thread = MessagingService.create_thread(
+            subject='Test',
+            participants=[user1, user2],
+            created_by=user1,
+        )
+
+        message = MessagingService.send_message(
+            thread=thread,
+            sender=user1,
+            body='Hello, this is a test message',
+        )
+
+        assert message.id is not None
+        assert message.thread == thread
+        assert message.sender == user1
+        assert message.body == 'Hello, this is a test message'
+        assert message.is_system_message is False
+        # Sender should have message marked as read
+        assert str(user1.id) in message.read_by
+
+    def test_send_message_non_participant(self):
+        """Non-participant cannot send message."""
+        user1 = UserFactory()
+        user2 = UserFactory()
+        outsider = UserFactory()
+
+        thread = MessagingService.create_thread(
+            subject='Test',
+            participants=[user1, user2],
+            created_by=user1,
+        )
+
+        with pytest.raises(BusinessValidationError, match='not a participant'):
+            MessagingService.send_message(
+                thread=thread,
+                sender=outsider,
+                body='I should not be able to send this',
+            )
+
+    def test_send_message_with_attachments(self):
+        """Message can include attachments."""
+        user1 = UserFactory()
+        user2 = UserFactory()
+
+        thread = MessagingService.create_thread(
+            subject='Test',
+            participants=[user1, user2],
+            created_by=user1,
+        )
+
+        attachments = [
+            {'filename': 'doc.pdf', 'url': 'https://example.com/doc.pdf'},
+            {'filename': 'image.png', 'url': 'https://example.com/image.png'},
+        ]
+
+        message = MessagingService.send_message(
+            thread=thread,
+            sender=user1,
+            body='Check these files',
+            attachments=attachments,
+        )
+
+        assert len(message.attachments) == 2
+        assert message.attachments[0]['filename'] == 'doc.pdf'
+
+    def test_send_system_message(self):
+        """System messages can be sent."""
+        user1 = UserFactory()
+        user2 = UserFactory()
+
+        thread = MessagingService.create_thread(
+            subject='Test',
+            participants=[user1, user2],
+            created_by=user1,
+        )
+
+        message = MessagingService.send_message(
+            thread=thread,
+            sender=user1,
+            body='User joined the conversation',
+            is_system_message=True,
+        )
+
+        assert message.is_system_message is True
+
+    def test_mark_as_read(self):
+        """Message is marked as read by user."""
+        user1 = UserFactory()
+        user2 = UserFactory()
+
+        thread = MessagingService.create_thread(
+            subject='Test',
+            participants=[user1, user2],
+            created_by=user1,
+        )
+
+        message = MessagingService.send_message(
+            thread=thread,
+            sender=user1,
+            body='Test message',
+        )
+
+        # Initially only sender has read it
+        assert str(user2.id) not in message.read_by
+
+        # User2 marks as read
+        updated = MessagingService.mark_as_read(message, user2)
+
+        assert str(user2.id) in updated.read_by
+
+    def test_mark_thread_as_read(self):
+        """All messages in thread are marked as read."""
+        user1 = UserFactory()
+        user2 = UserFactory()
+
+        thread = MessagingService.create_thread(
+            subject='Test',
+            participants=[user1, user2],
+            created_by=user1,
+        )
+
+        # User1 sends 3 messages
+        for i in range(3):
+            MessagingService.send_message(
+                thread=thread,
+                sender=user1,
+                body=f'Message {i}',
+            )
+
+        # User2 marks all as read
+        count = MessagingService.mark_thread_as_read(thread, user2)
+
+        assert count == 3
+
+        # Verify all are marked as read
+        for message in thread.messages.all():
+            assert str(user2.id) in message.read_by
+
+    def test_get_unread_count(self):
+        """Unread message count is calculated correctly."""
+        user1 = UserFactory()
+        user2 = UserFactory()
+
+        thread = MessagingService.create_thread(
+            subject='Test',
+            participants=[user1, user2],
+            created_by=user1,
+        )
+
+        # User1 sends 5 messages
+        for i in range(5):
+            MessagingService.send_message(
+                thread=thread,
+                sender=user1,
+                body=f'Message {i}',
+            )
+
+        # User2 should have 5 unread
+        count = MessagingService.get_unread_count(user2, thread=thread)
+        assert count == 5
+
+        # User1 should have 0 unread (sent by themselves)
+        count = MessagingService.get_unread_count(user1, thread=thread)
+        assert count == 0
+
+    def test_get_unread_count_all_threads(self):
+        """Unread count across all threads."""
+        user1 = UserFactory()
+        user2 = UserFactory()
+        user3 = UserFactory()
+
+        # Create two threads
+        thread1 = MessagingService.create_thread(
+            subject='Thread 1',
+            participants=[user1, user2],
+            created_by=user1,
+        )
+
+        thread2 = MessagingService.create_thread(
+            subject='Thread 2',
+            participants=[user1, user3],
+            created_by=user1,
+        )
+
+        # User2 sends 2 messages in thread1
+        for i in range(2):
+            MessagingService.send_message(
+                thread=thread1,
+                sender=user2,
+                body=f'Message {i}',
+            )
+
+        # User3 sends 3 messages in thread2
+        for i in range(3):
+            MessagingService.send_message(
+                thread=thread2,
+                sender=user3,
+                body=f'Message {i}',
+            )
+
+        # User1 should have 5 unread total (2 + 3)
+        count = MessagingService.get_unread_count(user1)
+        assert count == 5
+
+    def test_archive_thread(self):
+        """Thread is archived."""
+        user1 = UserFactory()
+        user2 = UserFactory()
+
+        thread = MessagingService.create_thread(
+            subject='Test',
+            participants=[user1, user2],
+            created_by=user1,
+        )
+
+        assert thread.is_archived is False
+        assert thread.archived_at is None
+
+        archived = MessagingService.archive_thread(thread, user1)
+
+        assert archived.is_archived is True
+        assert archived.archived_at is not None
+
+    def test_archive_thread_non_participant(self):
+        """Non-participant cannot archive thread."""
+        user1 = UserFactory()
+        user2 = UserFactory()
+        outsider = UserFactory()
+
+        thread = MessagingService.create_thread(
+            subject='Test',
+            participants=[user1, user2],
+            created_by=user1,
+        )
+
+        with pytest.raises(BusinessValidationError, match='not a participant'):
+            MessagingService.archive_thread(thread, outsider)
+
+    def test_add_participant(self):
+        """Participant is added to thread."""
+        user1 = UserFactory()
+        user2 = UserFactory()
+        user3 = UserFactory()
+
+        thread = MessagingService.create_thread(
+            subject='Test',
+            participants=[user1, user2],
+            created_by=user1,
+        )
+
+        assert thread.participants.count() == 2
+
+        updated = MessagingService.add_participant(thread, user3, user1)
+
+        assert updated.participants.count() == 3
+        assert user3 in updated.participants.all()
+
+        # Should create system message
+        last_message = thread.messages.last()
+        assert last_message.is_system_message is True
+        assert user3.get_full_name() in last_message.body
+
+    def test_add_participant_non_participant_adder(self):
+        """Non-participant cannot add others."""
+        user1 = UserFactory()
+        user2 = UserFactory()
+        user3 = UserFactory()
+        outsider = UserFactory()
+
+        thread = MessagingService.create_thread(
+            subject='Test',
+            participants=[user1, user2],
+            created_by=user1,
+        )
+
+        with pytest.raises(BusinessValidationError, match='not a participant'):
+            MessagingService.add_participant(thread, user3, outsider)
+
+    def test_add_existing_participant_idempotent(self):
+        """Adding existing participant is idempotent."""
+        user1 = UserFactory()
+        user2 = UserFactory()
+
+        thread = MessagingService.create_thread(
+            subject='Test',
+            participants=[user1, user2],
+            created_by=user1,
+        )
+
+        original_count = thread.participants.count()
+
+        # Try to add user2 again
+        updated = MessagingService.add_participant(thread, user2, user1)
+
+        assert updated.participants.count() == original_count
+
+    def test_remove_participant(self):
+        """Participant is removed from thread."""
+        user1 = UserFactory()
+        user2 = UserFactory()
+        user3 = UserFactory()
+
+        thread = MessagingService.create_thread(
+            subject='Test',
+            participants=[user1, user2, user3],
+            created_by=user1,
+        )
+
+        assert thread.participants.count() == 3
+
+        updated = MessagingService.remove_participant(thread, user3, user1)
+
+        assert updated.participants.count() == 2
+        assert user3 not in updated.participants.all()
+
+        # Should create system message
+        last_message = thread.messages.last()
+        assert last_message.is_system_message is True
+
+    def test_remove_participant_self_leave(self):
+        """User can leave thread themselves."""
+        user1 = UserFactory()
+        user2 = UserFactory()
+        user3 = UserFactory()
+
+        thread = MessagingService.create_thread(
+            subject='Test',
+            participants=[user1, user2, user3],
+            created_by=user1,
+        )
+
+        updated = MessagingService.remove_participant(thread, user3, user3)
+
+        assert user3 not in updated.participants.all()
+
+        # System message should say "left"
+        last_message = thread.messages.last()
+        assert 'left' in last_message.body
+
+    def test_remove_participant_from_two_person_thread(self):
+        """Cannot remove from thread with only 2 participants."""
+        user1 = UserFactory()
+        user2 = UserFactory()
+
+        thread = MessagingService.create_thread(
+            subject='Test',
+            participants=[user1, user2],
+            created_by=user1,
+        )
+
+        with pytest.raises(BusinessValidationError, match='only 2 participants'):
+            MessagingService.remove_participant(thread, user2, user1)
+
+    def test_remove_participant_non_participant_remover(self):
+        """Non-participant cannot remove others."""
+        user1 = UserFactory()
+        user2 = UserFactory()
+        user3 = UserFactory()
+        outsider = UserFactory()
+
+        thread = MessagingService.create_thread(
+            subject='Test',
+            participants=[user1, user2, user3],
+            created_by=user1,
+        )
+
+        with pytest.raises(BusinessValidationError, match='not a participant'):
+            MessagingService.remove_participant(thread, user3, outsider)

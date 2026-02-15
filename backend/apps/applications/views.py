@@ -11,7 +11,7 @@ from apps.accounts.permissions import IsCandidate, IsInternalUser
 from apps.jobs.models import PipelineStage, Requisition
 
 from .filters import ApplicationFilter
-from .models import Application
+from .models import Application, TalentPool
 from .selectors import ApplicationSelector
 from .serializers import (
     AddTagSerializer,
@@ -26,8 +26,14 @@ from .serializers import (
     InternalApplicationListSerializer,
     MoveToStageSerializer,
     PipelineStageSerializer,
+    TalentPoolAddCandidatesSerializer,
+    TalentPoolCreateSerializer,
+    TalentPoolDetailSerializer,
+    TalentPoolRemoveCandidatesSerializer,
+    TalentPoolSerializer,
+    TalentPoolUpdateSerializer,
 )
-from .services import ApplicationService
+from .services import ApplicationService, TalentPoolService
 
 # --- Candidate-facing views ---
 
@@ -302,3 +308,100 @@ class BulkRejectView(generics.GenericAPIView):
             actor=request.user,
         )
         return Response({'rejected': count}, status=status.HTTP_200_OK)
+
+
+class TalentPoolViewSet(viewsets.ModelViewSet):
+    """Manage talent pools for proactive recruiting."""
+
+    permission_classes = [IsAuthenticated, IsInternalUser]
+    queryset = TalentPool.objects.all().select_related('owner__user')
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return TalentPoolDetailSerializer
+        if self.action == 'create':
+            return TalentPoolCreateSerializer
+        if self.action in ['update', 'partial_update']:
+            return TalentPoolUpdateSerializer
+        if self.action == 'add_candidates':
+            return TalentPoolAddCandidatesSerializer
+        if self.action == 'remove_candidates':
+            return TalentPoolRemoveCandidatesSerializer
+        return TalentPoolSerializer
+
+    def perform_create(self, serializer):
+        pool = TalentPoolService.create_pool(
+            name=serializer.validated_data['name'],
+            description=serializer.validated_data.get('description', ''),
+            owner=self.request.user.internal_profile,
+            is_dynamic=serializer.validated_data.get('is_dynamic', False),
+            search_criteria=serializer.validated_data.get('search_criteria', {}),
+        )
+        return pool
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        pool = self.perform_create(serializer)
+        return Response(
+            TalentPoolSerializer(pool).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    def perform_update(self, serializer):
+        pool = self.get_object()
+        return TalentPoolService.update_pool_details(
+            pool,
+            name=serializer.validated_data.get('name'),
+            description=serializer.validated_data.get('description'),
+            is_dynamic=serializer.validated_data.get('is_dynamic'),
+            search_criteria=serializer.validated_data.get('search_criteria'),
+        )
+
+    def update(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        pool = self.perform_update(serializer)
+        return Response(TalentPoolSerializer(pool).data)
+
+    @action(detail=True, methods=['post'])
+    def add_candidates(self, request, pk=None):
+        """Add candidates to the talent pool."""
+        pool = self.get_object()
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        count = TalentPoolService.add_candidates(
+            pool,
+            serializer.validated_data['candidate_ids'],
+        )
+        return Response(
+            {'added': count},
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=['post'])
+    def remove_candidates(self, request, pk=None):
+        """Remove candidates from the talent pool."""
+        pool = self.get_object()
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        count = TalentPoolService.remove_candidates(
+            pool,
+            serializer.validated_data['candidate_ids'],
+        )
+        return Response(
+            {'removed': count},
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=['post'])
+    def refresh(self, request, pk=None):
+        """Refresh a dynamic talent pool based on search criteria."""
+        pool = self.get_object()
+        count = TalentPoolService.update_dynamic_pool(pool)
+        return Response(
+            {'candidate_count': count},
+            status=status.HTTP_200_OK,
+        )

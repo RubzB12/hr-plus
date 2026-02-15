@@ -32,6 +32,7 @@ THIRD_PARTY_APPS = [
     'django_filters',
     'drf_spectacular',
     'django_celery_beat',
+    'django_elasticsearch_dsl',
     'storages',
     'channels',
     'encrypted_fields',

@@ -106,6 +106,25 @@ class RoleSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'is_system']
 
 
+class CandidateProfileListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for candidate lists (e.g., talent pools)."""
+
+    user_name = serializers.SerializerMethodField()
+    user_email = serializers.EmailField(source='user.email', read_only=True)
+
+    class Meta:
+        model = CandidateProfile
+        fields = [
+            'id', 'user_name', 'user_email', 'location_city',
+            'location_country', 'work_authorization',
+            'profile_completeness', 'created_at',
+        ]
+        read_only_fields = fields
+
+    def get_user_name(self, obj):
+        return obj.user.get_full_name()
+
+
 class CandidateProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     completeness = serializers.SerializerMethodField()

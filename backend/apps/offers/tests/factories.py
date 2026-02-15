@@ -42,6 +42,22 @@ class OfferFactory(factory.django.DjangoModelFactory):
     notes = ''
     created_by = factory.SubFactory(InternalUserFactory)
 
+    @classmethod
+    def _create(cls, model_class, *args, **kwargs):
+        """Override _create to allow setting created_at despite auto_now_add."""
+        # Extract created_at if provided
+        created_at = kwargs.pop('created_at', None)
+
+        # Create instance
+        instance = super()._create(model_class, *args, **kwargs)
+
+        # If created_at was provided, update it directly (bypassing auto_now_add)
+        if created_at is not None:
+            model_class.objects.filter(pk=instance.pk).update(created_at=created_at)
+            instance.refresh_from_db()
+
+        return instance
+
 
 class OfferApprovalFactory(factory.django.DjangoModelFactory):
     """Factory for OfferApproval model."""

@@ -7,7 +7,14 @@ from django.utils import timezone
 
 from apps.core.exceptions import BusinessValidationError
 
-from .models import Application, ApplicationEvent, ApplicationTag, CandidateNote, Tag
+from .models import (
+    Application,
+    ApplicationEvent,
+    ApplicationTag,
+    CandidateNote,
+    Tag,
+    TalentPool,
+)
 
 
 class ApplicationService:
@@ -229,3 +236,117 @@ class ApplicationService:
             ApplicationService.reject(app, reason=reason, actor=actor)
             count += 1
         return count
+
+
+class TalentPoolService:
+    """Manages talent pools for proactive recruiting."""
+
+    @staticmethod
+    @transaction.atomic
+    def create_pool(
+        *,
+        name: str,
+        description: str = '',
+        owner=None,
+        is_dynamic: bool = False,
+        search_criteria: dict | None = None,
+    ) -> TalentPool:
+        """Create a new talent pool."""
+        pool = TalentPool.objects.create(
+            name=name,
+            description=description,
+            owner=owner,
+            is_dynamic=is_dynamic,
+            search_criteria=search_criteria or {},
+        )
+        return pool
+
+    @staticmethod
+    @transaction.atomic
+    def add_candidates(pool: TalentPool, candidate_ids: list) -> int:
+        """Add candidates to a talent pool. Returns count added."""
+        from apps.accounts.models import CandidateProfile
+
+        candidates = CandidateProfile.objects.filter(id__in=candidate_ids)
+        existing_count = pool.candidates.count()
+        pool.candidates.add(*candidates)
+        return pool.candidates.count() - existing_count
+
+    @staticmethod
+    @transaction.atomic
+    def remove_candidates(pool: TalentPool, candidate_ids: list) -> int:
+        """Remove candidates from a talent pool. Returns count removed."""
+        from apps.accounts.models import CandidateProfile
+
+        candidates = CandidateProfile.objects.filter(id__in=candidate_ids)
+        existing_count = pool.candidates.count()
+        pool.candidates.remove(*candidates)
+        return existing_count - pool.candidates.count()
+
+    @staticmethod
+    @transaction.atomic
+    def update_dynamic_pool(pool: TalentPool) -> int:
+        """
+        Update a dynamic pool based on its search criteria.
+
+        Uses Elasticsearch to search for candidates matching the criteria
+        and updates the pool's candidate list.
+        """
+        if not pool.is_dynamic:
+            raise BusinessValidationError('Can only update dynamic pools.')
+
+        from apps.accounts.search import CandidateSearchService
+
+        # Extract search parameters from criteria
+        criteria = pool.search_criteria or {}
+        query = criteria.get('query', '')
+        skills = criteria.get('skills', [])
+        location_city = criteria.get('location_city')
+        location_country = criteria.get('location_country')
+        experience_min = criteria.get('experience_min')
+        experience_max = criteria.get('experience_max')
+        work_authorization = criteria.get('work_authorization')
+        source = criteria.get('source')
+
+        # Search for matching candidates
+        candidates = CandidateSearchService.search(
+            query=query,
+            skills=skills,
+            location_city=location_city,
+            location_country=location_country,
+            experience_min=experience_min,
+            experience_max=experience_max,
+            work_authorization=work_authorization,
+            source=source,
+            limit=criteria.get('limit', 100),
+        )
+
+        # Update pool candidates
+        pool.candidates.clear()
+        if candidates:
+            pool.candidates.add(*candidates)
+
+        return pool.candidates.count()
+
+    @staticmethod
+    @transaction.atomic
+    def update_pool_details(
+        pool: TalentPool,
+        *,
+        name: str | None = None,
+        description: str | None = None,
+        is_dynamic: bool | None = None,
+        search_criteria: dict | None = None,
+    ) -> TalentPool:
+        """Update pool metadata."""
+        if name is not None:
+            pool.name = name
+        if description is not None:
+            pool.description = description
+        if is_dynamic is not None:
+            pool.is_dynamic = is_dynamic
+        if search_criteria is not None:
+            pool.search_criteria = search_criteria
+
+        pool.save()
+        return pool

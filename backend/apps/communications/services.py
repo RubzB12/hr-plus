@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from apps.core.exceptions import BusinessValidationError
 
-from .models import EmailLog, EmailTemplate, Notification
+from .models import EmailLog, EmailTemplate, Message, MessageThread, Notification
 
 
 class TemplateService:
@@ -322,6 +322,78 @@ class EmailService:
             application=application,
         )
 
+    @staticmethod
+    def send_onboarding_welcome(plan):
+        """Send onboarding welcome email to new hire."""
+        context = {
+            'candidate_name': plan.application.candidate.user.get_full_name(),
+            'job_title': plan.application.requisition.title,
+            'start_date': plan.start_date.strftime('%B %d, %Y'),
+            'portal_url': f'{settings.FRONTEND_URL}/onboarding/{plan.access_token}',
+            'access_token': plan.access_token,
+            'company_name': 'HR-Plus',
+        }
+
+        return EmailService.send_templated_email(
+            template_name='Onboarding Welcome',
+            recipient=plan.application.candidate.user.email,
+            context=context,
+            application=plan.application,
+        )
+
+    @staticmethod
+    def send_onboarding_completed(plan):
+        """Send onboarding completion notification."""
+        # Notify candidate
+        candidate_context = {
+            'candidate_name': plan.application.candidate.user.get_full_name(),
+            'job_title': plan.application.requisition.title,
+            'completion_date': plan.completed_at.strftime('%B %d, %Y'),
+            'company_name': 'HR-Plus',
+        }
+
+        EmailService.send_templated_email(
+            template_name='Onboarding Completed',
+            recipient=plan.application.candidate.user.email,
+            context=candidate_context,
+            application=plan.application,
+        )
+
+        # Notify HR contact if assigned
+        if plan.hr_contact:
+            hr_context = {
+                'hr_name': plan.hr_contact.user.get_full_name(),
+                'candidate_name': plan.application.candidate.user.get_full_name(),
+                'job_title': plan.application.requisition.title,
+                'completion_date': plan.completed_at.strftime('%B %d, %Y'),
+            }
+
+            EmailService.send_templated_email(
+                template_name='Onboarding Completed (HR)',
+                recipient=plan.hr_contact.user.email,
+                context=hr_context,
+                application=plan.application,
+            )
+
+    @staticmethod
+    def send_task_reminder(task):
+        """Send task reminder to assignee."""
+        context = {
+            'assignee_name': task.assigned_to.get_full_name(),
+            'task_title': task.title,
+            'task_description': task.description,
+            'due_date': task.due_date.strftime('%B %d, %Y'),
+            'candidate_name': task.plan.application.candidate.user.get_full_name(),
+            'company_name': 'HR-Plus',
+        }
+
+        return EmailService.send_templated_email(
+            template_name='Onboarding Task Reminder',
+            recipient=task.assigned_to.email,
+            context=context,
+            application=task.plan.application,
+        )
+
 
 class NotificationService:
     """Service for managing in-app notifications."""
@@ -416,3 +488,290 @@ class NotificationService:
             recipient=user,
             is_read=False,
         ).count()
+
+    @staticmethod
+    def notify_new_message(message: 'Message') -> Notification:
+        """
+        Create notification for new message.
+
+        Args:
+            message: Message instance
+
+        Returns:
+            Notification instance
+        """
+        thread = message.thread
+        subject = thread.subject or 'New Message'
+
+        # Notify all participants except sender
+        notifications = []
+        for participant in thread.participants.exclude(id=message.sender.id):
+            notification = NotificationService.create_notification(
+                recipient=participant,
+                notification_type='message',
+                title=f'New message from {message.sender.get_full_name()}',
+                body=f'{subject}: {message.body[:100]}...' if len(message.body) > 100 else message.body,
+                link=f'/messages/{thread.id}',
+                metadata={'thread_id': str(thread.id), 'message_id': str(message.id)},
+            )
+            notifications.append(notification)
+
+        return notifications[0] if notifications else None
+
+
+class MessagingService:
+    """Service for managing in-app messaging."""
+
+    @staticmethod
+    @transaction.atomic
+    def create_thread(
+        *,
+        subject: str = '',
+        participants: list,
+        application=None,
+        created_by,
+    ) -> MessageThread:
+        """
+        Create a new message thread.
+
+        Args:
+            subject: Thread subject (optional)
+            participants: List of User instances who will participate
+            application: Related application (optional)
+            created_by: User creating the thread
+
+        Returns:
+            MessageThread instance
+
+        Raises:
+            BusinessValidationError: If participants list is invalid
+        """
+        if not participants:
+            raise BusinessValidationError('Thread must have at least one participant')
+
+        if len(participants) < 2:
+            raise BusinessValidationError('Thread must have at least two participants')
+
+        thread = MessageThread.objects.create(
+            subject=subject,
+            application=application,
+        )
+
+        # Add participants (including creator)
+        all_participants = set(participants)
+        all_participants.add(created_by)
+        thread.participants.set(all_participants)
+
+        return thread
+
+    @staticmethod
+    @transaction.atomic
+    def send_message(
+        *,
+        thread: MessageThread,
+        sender,
+        body: str,
+        attachments: list = None,
+        is_system_message: bool = False,
+    ) -> Message:
+        """
+        Send a message in a thread.
+
+        Args:
+            thread: MessageThread instance
+            sender: User sending the message
+            body: Message body text
+            attachments: List of attachment metadata (optional)
+            is_system_message: Whether this is a system-generated message
+
+        Returns:
+            Message instance
+
+        Raises:
+            BusinessValidationError: If sender is not a participant
+        """
+        # Verify sender is a participant
+        if not is_system_message and not thread.participants.filter(id=sender.id).exists():
+            raise BusinessValidationError('You are not a participant in this thread')
+
+        message = Message.objects.create(
+            thread=thread,
+            sender=sender,
+            body=body,
+            attachments=attachments or [],
+            is_system_message=is_system_message,
+        )
+
+        # Mark as read by sender immediately
+        message.mark_as_read(sender)
+
+        # Update thread timestamp
+        thread.save(update_fields=['updated_at'])
+
+        # Send notifications to other participants
+        if not is_system_message:
+            NotificationService.notify_new_message(message)
+
+        return message
+
+    @staticmethod
+    @transaction.atomic
+    def mark_as_read(message: Message, user) -> Message:
+        """
+        Mark a message as read by a user.
+
+        Args:
+            message: Message instance
+            user: User marking as read
+
+        Returns:
+            Updated message
+        """
+        message.mark_as_read(user)
+        return message
+
+    @staticmethod
+    @transaction.atomic
+    def mark_thread_as_read(thread: MessageThread, user) -> int:
+        """
+        Mark all messages in a thread as read.
+
+        Args:
+            thread: MessageThread instance
+            user: User marking as read
+
+        Returns:
+            Number of messages marked as read
+        """
+        count = 0
+        for message in thread.messages.exclude(sender=user):
+            if str(user.id) not in message.read_by:
+                message.mark_as_read(user)
+                count += 1
+
+        return count
+
+    @staticmethod
+    def get_unread_count(user, thread: MessageThread = None) -> int:
+        """
+        Get count of unread messages for a user.
+
+        Args:
+            user: User instance
+            thread: Optional specific thread to count
+
+        Returns:
+            Count of unread messages
+        """
+        messages_qs = Message.objects.filter(
+            thread__participants=user,
+        ).exclude(
+            sender=user,
+        )
+
+        if thread:
+            messages_qs = messages_qs.filter(thread=thread)
+
+        # Count messages where user.id is not in read_by
+        count = 0
+        for message in messages_qs:
+            if str(user.id) not in message.read_by:
+                count += 1
+
+        return count
+
+    @staticmethod
+    @transaction.atomic
+    def archive_thread(thread: MessageThread, user) -> MessageThread:
+        """
+        Archive a thread.
+
+        Args:
+            thread: MessageThread instance
+            user: User archiving (must be participant)
+
+        Returns:
+            Updated thread
+
+        Raises:
+            BusinessValidationError: If user is not a participant
+        """
+        if not thread.participants.filter(id=user.id).exists():
+            raise BusinessValidationError('You are not a participant in this thread')
+
+        if not thread.is_archived:
+            thread.is_archived = True
+            thread.archived_at = timezone.now()
+            thread.save(update_fields=['is_archived', 'archived_at', 'updated_at'])
+
+        return thread
+
+    @staticmethod
+    @transaction.atomic
+    def add_participant(thread: MessageThread, user, added_by) -> MessageThread:
+        """
+        Add a participant to a thread.
+
+        Args:
+            thread: MessageThread instance
+            user: User to add
+            added_by: User adding the participant
+
+        Returns:
+            Updated thread
+
+        Raises:
+            BusinessValidationError: If added_by is not a participant
+        """
+        if not thread.participants.filter(id=added_by.id).exists():
+            raise BusinessValidationError('You are not a participant in this thread')
+
+        if not thread.participants.filter(id=user.id).exists():
+            thread.participants.add(user)
+
+            # Create system message
+            MessagingService.send_message(
+                thread=thread,
+                sender=added_by,
+                body=f'{added_by.get_full_name()} added {user.get_full_name()} to the conversation',
+                is_system_message=True,
+            )
+
+        return thread
+
+    @staticmethod
+    @transaction.atomic
+    def remove_participant(thread: MessageThread, user, removed_by) -> MessageThread:
+        """
+        Remove a participant from a thread.
+
+        Args:
+            thread: MessageThread instance
+            user: User to remove
+            removed_by: User removing the participant
+
+        Returns:
+            Updated thread
+
+        Raises:
+            BusinessValidationError: If removed_by is not a participant or trying to leave
+        """
+        if not thread.participants.filter(id=removed_by.id).exists():
+            raise BusinessValidationError('You are not a participant in this thread')
+
+        if thread.participants.count() <= 2:
+            raise BusinessValidationError('Cannot remove participant from a thread with only 2 participants')
+
+        if thread.participants.filter(id=user.id).exists():
+            thread.participants.remove(user)
+
+            # Create system message
+            action = 'left' if user.id == removed_by.id else 'was removed from'
+            MessagingService.send_message(
+                thread=thread,
+                sender=removed_by,
+                body=f'{user.get_full_name()} {action} the conversation',
+                is_system_message=True,
+            )
+
+        return thread

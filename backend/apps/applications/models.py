@@ -247,3 +247,41 @@ class CandidateNote(BaseModel):
 
     def __str__(self):
         return f'Note on {self.application.application_id} by {self.author}'
+
+
+class TalentPool(BaseModel):
+    """Talent pool for proactive recruiting.
+
+    Can be static (manually curated) or dynamic (auto-updated based on search criteria).
+    """
+
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    owner = models.ForeignKey(
+        'accounts.InternalUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='owned_talent_pools',
+    )
+    candidates = models.ManyToManyField(
+        'accounts.CandidateProfile',
+        related_name='talent_pools',
+        blank=True,
+    )
+    is_dynamic = models.BooleanField(
+        default=False,
+        help_text='Dynamic pools auto-update based on search_criteria.',
+    )
+    search_criteria = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Search filters for dynamic pools (skills, experience, location, etc.).',
+    )
+
+    class Meta:
+        db_table = 'applications_talent_pool'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
