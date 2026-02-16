@@ -280,6 +280,176 @@ class JobRecommendationsView(generics.ListAPIView):
         })
 
 
+class CandidateAnalyticsView(generics.GenericAPIView):
+    """
+    Comprehensive analytics dashboard for candidates.
+
+    Returns:
+    - Application statistics (total, active, success rate)
+    - Application timeline data
+    - Profile engagement metrics
+    - Interview statistics
+    - Insights and recommendations
+    """
+    permission_classes = [IsAuthenticated, IsCandidate]
+
+    def get(self, request):
+        from django.db.models import Count, Avg, Q
+        from django.utils import timezone
+        from datetime import timedelta
+        from apps.applications.models import Application
+        from apps.interviews.models import Interview
+
+        candidate = CandidateProfile.objects.get(user=request.user)
+
+        # Application Statistics
+        applications = Application.objects.filter(candidate=candidate).exclude(status='draft')
+        total_applications = applications.count()
+
+        active_applications = applications.filter(
+            status__in=['applied', 'screening', 'interview', 'assessment', 'offer']
+        ).count()
+
+        offers = applications.filter(status='offer').count()
+        hired = applications.filter(status='hired').count()
+        rejected = applications.filter(status='rejected').count()
+
+        success_rate = round((hired / total_applications * 100), 1) if total_applications > 0 else 0
+        offer_rate = round(((offers + hired) / total_applications * 100), 1) if total_applications > 0 else 0
+
+        # Application Timeline (last 6 months)
+        six_months_ago = timezone.now() - timedelta(days=180)
+        timeline_data = []
+
+        for i in range(6):
+            month_start = timezone.now() - timedelta(days=30 * (5 - i))
+            month_end = timezone.now() - timedelta(days=30 * (4 - i)) if i < 5 else timezone.now()
+
+            month_applications = applications.filter(
+                applied_at__gte=month_start,
+                applied_at__lt=month_end
+            ).count()
+
+            timeline_data.append({
+                'month': month_start.strftime('%b %Y'),
+                'applications': month_applications
+            })
+
+        # Recent Activity (last 30 days)
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        recent_applications = applications.filter(applied_at__gte=thirty_days_ago).count()
+
+        # Interview Statistics
+        interviews = Interview.objects.filter(
+            application__candidate=candidate
+        )
+        total_interviews = interviews.count()
+        completed_interviews = interviews.filter(status='completed').count()
+        upcoming_interviews = interviews.filter(
+            status='scheduled',
+            scheduled_at__gte=timezone.now()
+        ).count()
+
+        # Status Breakdown
+        status_breakdown = []
+        for status, label in Application.STATUS_CHOICES:
+            if status == 'draft':
+                continue
+            count = applications.filter(status=status).count()
+            if count > 0:
+                status_breakdown.append({
+                    'status': status,
+                    'label': label,
+                    'count': count,
+                    'percentage': round((count / total_applications * 100), 1) if total_applications > 0 else 0
+                })
+
+        # Average Time in Process (days from applied to current status)
+        applications_with_time = applications.exclude(status__in=['draft', 'withdrawn'])
+        avg_days_in_process = 0
+        if applications_with_time.exists():
+            total_days = 0
+            for app in applications_with_time:
+                days = (timezone.now() - app.applied_at).days
+                total_days += days
+            avg_days_in_process = round(total_days / applications_with_time.count(), 1)
+
+        # Profile Completeness
+        profile_completion = candidate.calculate_completeness()
+
+        # Insights and Recommendations
+        insights = []
+
+        if profile_completion < 70:
+            insights.append({
+                'type': 'warning',
+                'title': 'Complete Your Profile',
+                'message': f'Your profile is {profile_completion}% complete. Candidates with 80%+ complete profiles get 3x more interview invites.',
+                'action': 'Complete Profile',
+                'action_link': '/dashboard/profile'
+            })
+
+        if total_applications == 0:
+            insights.append({
+                'type': 'info',
+                'title': 'Start Applying',
+                'message': 'You haven\'t applied to any positions yet. Browse open roles to get started!',
+                'action': 'Browse Jobs',
+                'action_link': '/jobs'
+            })
+        elif recent_applications == 0 and total_applications > 0:
+            insights.append({
+                'type': 'info',
+                'title': 'Stay Active',
+                'message': 'You haven\'t applied to any positions in the last 30 days. Check out new openings!',
+                'action': 'Browse Jobs',
+                'action_link': '/jobs'
+            })
+
+        if offer_rate > 0 and offer_rate < 20 and total_applications > 5:
+            insights.append({
+                'type': 'tip',
+                'title': 'Improve Your Success Rate',
+                'message': 'Consider tailoring your applications more closely to job requirements to increase your offer rate.',
+                'action': None,
+                'action_link': None
+            })
+
+        if total_interviews > 0 and completed_interviews > 0:
+            interview_to_offer_rate = round(((offers + hired) / completed_interviews * 100), 1) if completed_interviews > 0 else 0
+            if interview_to_offer_rate > 50:
+                insights.append({
+                    'type': 'success',
+                    'title': 'Strong Interview Performance',
+                    'message': f'You\'re converting {interview_to_offer_rate}% of interviews to offers. Keep it up!',
+                    'action': None,
+                    'action_link': None
+                })
+
+        return Response({
+            'overview': {
+                'total_applications': total_applications,
+                'active_applications': active_applications,
+                'offers_received': offers + hired,
+                'success_rate': success_rate,
+                'offer_rate': offer_rate,
+                'profile_completion': profile_completion,
+            },
+            'timeline': timeline_data,
+            'recent_activity': {
+                'applications_last_30_days': recent_applications,
+                'avg_days_in_process': avg_days_in_process,
+            },
+            'interviews': {
+                'total': total_interviews,
+                'completed': completed_interviews,
+                'upcoming': upcoming_interviews,
+            },
+            'status_breakdown': status_breakdown,
+            'insights': insights,
+        })
+
+
 class WorkExperienceViewSet(viewsets.ModelViewSet):
     """CRUD for candidate work experience."""
 

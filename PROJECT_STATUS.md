@@ -1008,7 +1008,7 @@ Separate Next.js application for external candidates. MVP is fully implemented a
    - ✅ Performance: SSG with ISR (5-min revalidation)
    - ✅ Documentation: PUBLIC_CAREER_SITE_MVP_COMPLETE.md
 
-   **Phase 2 (Enhanced Features) - IN PROGRESS (86% complete - 6/7 features):**
+   **Phase 2 (Enhanced Features) - COMPLETE (100% - 7/7 features) ✅:**
    - ✅ **Job Alerts & Saved Searches** (COMPLETE - Feb 16, 2026)
      - **Backend:**
        - SavedSearch model with configurable alert frequency (instant/daily/weekly/never)
@@ -1095,8 +1095,90 @@ Separate Next.js application for external candidates. MVP is fully implemented a
      - **TypeScript:** RecommendedJob, JobRecommendationsResponse interfaces
      - **DAL:** New getRecommendations(limit) function
      - **Features:** Helps candidates discover relevant jobs based on profile, skills, and preferences
-   - [ ] Draft applications (save progress)
-   - [ ] Enhanced candidate analytics dashboard
+   - ✅ **Draft Applications** (COMPLETE - Feb 16, 2026)
+     - **Backend:**
+       - Added 'draft' status to Application model STATUS_CHOICES
+       - Updated unique constraint to allow multiple drafts per candidate-requisition pair
+       - Only one submitted application allowed per candidate-requisition (excluding drafts)
+       - New index on (candidate, status) for efficient draft queries
+       - Migration created and applied successfully
+       - **API Endpoints:**
+         - GET `/api/v1/applications/drafts/` - List candidate's draft applications
+         - POST `/api/v1/applications/drafts/save/` - Save or update draft (creates if new, updates if exists)
+         - GET `/api/v1/applications/drafts/{id}/` - Get draft details
+         - DELETE `/api/v1/applications/drafts/{id}/delete/` - Delete draft
+         - POST `/api/v1/applications/drafts/{id}/submit/` - Submit draft (convert to application)
+       - ApplicationService.submit_draft() - Handles draft submission with validation
+         - Checks for duplicate submissions
+         - Assigns application ID
+         - Moves to 'applied' status and first pipeline stage
+         - Snapshots resume data
+         - Logs application creation event
+     - **Frontend:**
+       - Draft applications page (/dashboard/drafts)
+       - Shows all saved drafts with last saved timestamp
+       - DraftActions component with submit and delete functionality
+       - Submit button converts draft to full application
+       - Delete button with confirmation dialog
+       - Real-time status updates and loading states
+       - Added "Drafts" navigation link in dashboard sidebar
+       - Empty state with call-to-action when no drafts exist
+       - Stats card showing draft count
+     - **TypeScript & DAL:**
+       - Uses existing CandidateApplication types (status='draft')
+       - 5 new DAL functions: getDrafts(), getDraft(), saveDraft(), deleteDraft(), submitDraft()
+     - **Features:**
+       - Candidates can save incomplete applications to resume later
+       - Multiple drafts allowed per job (flexible workflow)
+       - One-click submission of completed drafts
+       - Easy draft management and cleanup
+       - Visual distinction with orange badges and icons
+       - Prevents duplicate submissions when converting draft to application
+
+   **Phase 3 (Analytics & Insights) - COMPLETE (100% - 1/1 feature) ✅:**
+   - ✅ **Enhanced Candidate Analytics Dashboard** (COMPLETE - Feb 16, 2026)
+     - **Backend:**
+       - CandidateAnalyticsView endpoint at `/api/v1/candidates/analytics/`
+       - Comprehensive analytics aggregations using Django ORM
+       - Real-time calculations (no caching for up-to-date metrics)
+       - **Metrics Provided:**
+         - Overview: Total applications, active applications, offers received, success rate, offer rate, profile completion
+         - Timeline: 6-month application trend data
+         - Recent Activity: Applications in last 30 days, average days in process
+         - Interview Stats: Total, completed, upcoming interviews
+         - Status Breakdown: Application distribution across all statuses with percentages
+       - **Insights & Recommendations Engine:**
+         - Profile completion reminders (if < 70%)
+         - Activity nudges (if no recent applications)
+         - Success rate improvement tips
+         - Interview performance feedback
+         - Actionable insights with links to relevant pages
+     - **Frontend:**
+       - Analytics dashboard page (/dashboard/analytics)
+       - 6 key metric cards with color-coded icons
+       - Timeline bar chart component (6-month trend visualization)
+       - Status breakdown with progress bars
+       - Recent activity stats panel
+       - Interview statistics panel
+       - InsightsPanel component with 4 insight types (success, warning, info, tip)
+       - Color-coded insights with action buttons
+       - Responsive grid layout (2-3 columns on desktop)
+       - Hover effects and tooltips on charts
+     - **TypeScript & DAL:**
+       - 7 new interfaces: CandidateAnalyticsOverview, TimelineDataPoint, RecentActivity, InterviewStats, StatusBreakdown, Insight, CandidateAnalyticsResponse
+       - New DAL function: getCandidateAnalytics()
+     - **Navigation:**
+       - Added "Analytics" link to dashboard sidebar
+       - Chart icon for analytics section
+     - **Features:**
+       - Visual dashboard showing complete job search performance
+       - Application trend tracking over time
+       - Success metrics and conversion rates
+       - Personalized insights and actionable recommendations
+       - Interview performance tracking
+       - Real-time status breakdown
+       - Profile completion integration
+       - Activity monitoring
 
 6. **✅ COMPLETED: Resume Parsing**
    - ✅ PDF resume parsing with pdfplumber

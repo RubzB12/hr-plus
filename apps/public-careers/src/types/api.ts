@@ -226,3 +226,52 @@ export interface JobRecommendationsResponse {
   count: number
   recommendations: RecommendedJob[]
 }
+
+export interface CandidateAnalyticsOverview {
+  total_applications: number
+  active_applications: number
+  offers_received: number
+  success_rate: number
+  offer_rate: number
+  profile_completion: number
+}
+
+export interface TimelineDataPoint {
+  month: string
+  applications: number
+}
+
+export interface RecentActivity {
+  applications_last_30_days: number
+  avg_days_in_process: number
+}
+
+export interface InterviewStats {
+  total: number
+  completed: number
+  upcoming: number
+}
+
+export interface StatusBreakdown {
+  status: string
+  label: string
+  count: number
+  percentage: number
+}
+
+export interface Insight {
+  type: 'success' | 'warning' | 'info' | 'tip'
+  title: string
+  message: string
+  action: string | null
+  action_link: string | null
+}
+
+export interface CandidateAnalyticsResponse {
+  overview: CandidateAnalyticsOverview
+  timeline: TimelineDataPoint[]
+  recent_activity: RecentActivity
+  interviews: InterviewStats
+  status_breakdown: StatusBreakdown[]
+  insights: Insight[]
+}

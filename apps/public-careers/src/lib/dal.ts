@@ -191,6 +191,63 @@ export async function withdrawApplication(id: string) {
   return res.json()
 }
 
+// Draft application functions
+export async function getDrafts() {
+  const res = await fetch(`${API_URL}/api/v1/applications/drafts/`, {
+    headers: await getAuthHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) throw new Error('Failed to fetch drafts')
+  return res.json()
+}
+
+export async function getDraft(id: string) {
+  const res = await fetch(`${API_URL}/api/v1/applications/drafts/${id}/`, {
+    headers: await getAuthHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) throw new Error('Failed to fetch draft')
+  return res.json()
+}
+
+export async function saveDraft(data: {
+  requisition_id: string
+  cover_letter?: string
+  screening_responses?: Record<string, string>
+  source?: string
+}) {
+  const res = await fetch(`${API_URL}/api/v1/applications/drafts/save/`, {
+    method: 'POST',
+    headers: await getAuthHeaders(),
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(JSON.stringify(error))
+  }
+  return res.json()
+}
+
+export async function deleteDraft(id: string) {
+  const res = await fetch(`${API_URL}/api/v1/applications/drafts/${id}/delete/`, {
+    method: 'DELETE',
+    headers: await getAuthHeaders(),
+  })
+  if (!res.ok) throw new Error('Failed to delete draft')
+}
+
+export async function submitDraft(id: string) {
+  const res = await fetch(`${API_URL}/api/v1/applications/drafts/${id}/submit/`, {
+    method: 'POST',
+    headers: await getAuthHeaders(),
+  })
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(JSON.stringify(error))
+  }
+  return res.json()
+}
+
 export async function getSavedSearches() {
   const res = await fetch(`${API_URL}/api/v1/candidates/saved-searches/`, {
     headers: await getAuthHeaders(),
@@ -276,5 +333,14 @@ export async function getJobAlerts() {
     cache: 'no-store',
   })
   if (!res.ok) throw new Error('Failed to fetch job alerts')
+  return res.json()
+}
+
+export async function getCandidateAnalytics() {
+  const res = await fetch(`${API_URL}/api/v1/candidates/analytics/`, {
+    headers: await getAuthHeaders(),
+    cache: 'no-store', // Always get fresh analytics
+  })
+  if (!res.ok) throw new Error('Failed to fetch analytics')
   return res.json()
 }

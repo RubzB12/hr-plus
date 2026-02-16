@@ -11,6 +11,7 @@ class Application(BaseModel):
     """A candidate's application to a specific requisition."""
 
     STATUS_CHOICES = [
+        ('draft', 'Draft'),
         ('applied', 'Applied'),
         ('screening', 'Screening'),
         ('interview', 'Interview'),
@@ -95,12 +96,14 @@ class Application(BaseModel):
         constraints = [
             models.UniqueConstraint(
                 fields=['candidate', 'requisition'],
-                name='unique_candidate_requisition',
+                condition=~models.Q(status='draft'),
+                name='unique_candidate_requisition_submitted',
             ),
         ]
         indexes = [
             models.Index(fields=['requisition', 'status']),
             models.Index(fields=['candidate', '-applied_at']),
+            models.Index(fields=['candidate', 'status'], name='candidate_status_idx'),
         ]
 
     def __str__(self):

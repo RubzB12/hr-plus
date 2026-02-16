@@ -36,6 +36,7 @@ candidate_urlpatterns = [
     path('profile/', views.CandidateProfileView.as_view(), name='candidate-profile'),
     path('resume/', views.ResumeUploadView.as_view(), name='candidate-resume-upload'),
     path('recommendations/', views.JobRecommendationsView.as_view(), name='candidate-recommendations'),
+    path('analytics/', views.CandidateAnalyticsView.as_view(), name='candidate-analytics'),
     path('', include(candidate_router.urls)),
 ]
 

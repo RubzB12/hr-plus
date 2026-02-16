@@ -127,6 +127,145 @@ class CandidateApplicationWithdrawView(generics.GenericAPIView):
         )
 
 
+# --- Draft application views ---
+
+class DraftApplicationListView(generics.ListAPIView):
+    """List candidate's draft applications."""
+
+    permission_classes = [IsAuthenticated, IsCandidate]
+    serializer_class = CandidateApplicationListSerializer
+
+    def get_queryset(self):
+        return (
+            Application.objects
+            .filter(candidate__user=self.request.user, status='draft')
+            .select_related(
+                'requisition__department',
+                'requisition__location',
+                'current_stage',
+            )
+            .order_by('-updated_at')
+        )
+
+
+class DraftApplicationSaveView(generics.GenericAPIView):
+    """Save or update a draft application."""
+
+    permission_classes = [IsAuthenticated, IsCandidate]
+    serializer_class = ApplicationCreateSerializer
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        candidate = CandidateProfile.objects.get(user=request.user)
+        requisition = Requisition.objects.get(
+            id=serializer.validated_data['requisition_id'],
+        )
+
+        # Check if draft already exists for this requisition
+        draft = Application.objects.filter(
+            candidate=candidate,
+            requisition=requisition,
+            status='draft',
+        ).first()
+
+        if draft:
+            # Update existing draft
+            draft.cover_letter = serializer.validated_data.get('cover_letter', '')
+            draft.screening_responses = serializer.validated_data.get('screening_responses', {})
+            draft.source = serializer.validated_data.get('source', 'career_site')
+            draft.save(update_fields=['cover_letter', 'screening_responses', 'source', 'updated_at'])
+        else:
+            # Create new draft
+            draft = Application.objects.create(
+                candidate=candidate,
+                requisition=requisition,
+                status='draft',
+                cover_letter=serializer.validated_data.get('cover_letter', ''),
+                screening_responses=serializer.validated_data.get('screening_responses', {}),
+                source=serializer.validated_data.get('source', 'career_site'),
+            )
+
+        return Response(
+            CandidateApplicationDetailSerializer(draft).data,
+            status=status.HTTP_200_OK,
+        )
+
+
+class DraftApplicationDetailView(generics.RetrieveAPIView):
+    """Get draft application details."""
+
+    permission_classes = [IsAuthenticated, IsCandidate]
+    serializer_class = CandidateApplicationDetailSerializer
+
+    def get_queryset(self):
+        return (
+            Application.objects
+            .filter(candidate__user=self.request.user, status='draft')
+            .select_related(
+                'requisition__department',
+                'requisition__location',
+            )
+        )
+
+
+class DraftApplicationDeleteView(generics.DestroyAPIView):
+    """Delete a draft application."""
+
+    permission_classes = [IsAuthenticated, IsCandidate]
+
+    def get_queryset(self):
+        return Application.objects.filter(
+            candidate__user=self.request.user,
+            status='draft',
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        draft = self.get_object()
+        draft.delete()
+        return Response(
+            {'message': 'Draft deleted successfully'},
+            status=status.HTTP_200_OK,
+        )
+
+
+class DraftApplicationSubmitView(generics.GenericAPIView):
+    """Submit a draft application (convert to applied)."""
+
+    permission_classes = [IsAuthenticated, IsCandidate]
+
+    def post(self, request, pk):
+        from django.shortcuts import get_object_or_404
+
+        draft = get_object_or_404(
+            Application,
+            id=pk,
+            candidate__user=request.user,
+            status='draft',
+        )
+
+        # Check if candidate already has a submitted application for this requisition
+        existing_application = Application.objects.filter(
+            candidate=draft.candidate,
+            requisition=draft.requisition,
+        ).exclude(status='draft').first()
+
+        if existing_application:
+            return Response(
+                {'error': 'You have already applied to this position'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Convert draft to application using service
+        application = ApplicationService.submit_draft(draft, actor=request.user)
+
+        return Response(
+            CandidateApplicationDetailSerializer(application).data,
+            status=status.HTTP_200_OK,
+        )
+
+
 # --- Internal views ---
 
 class InternalApplicationViewSet(viewsets.ReadOnlyModelViewSet):

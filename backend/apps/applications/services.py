@@ -237,6 +237,67 @@ class ApplicationService:
             count += 1
         return count
 
+    @staticmethod
+    @transaction.atomic
+    def submit_draft(draft: Application, actor) -> Application:
+        """
+        Submit a draft application (convert to applied status).
+
+        - Validates the draft status
+        - Checks for duplicate submissions
+        - Assigns application ID if not present
+        - Moves to 'applied' status
+        - Assigns to first pipeline stage
+        - Snapshots resume data
+        - Logs creation event
+        """
+        if draft.status != 'draft':
+            raise BusinessValidationError(
+                'Only draft applications can be submitted.'
+            )
+
+        # Check for existing submitted application
+        if Application.objects.filter(
+            candidate=draft.candidate,
+            requisition=draft.requisition,
+        ).exclude(status='draft').exists():
+            raise BusinessValidationError(
+                'You have already applied to this position.'
+            )
+
+        # Assign application ID if not present
+        if not draft.application_id:
+            draft.application_id = ApplicationService._generate_application_id()
+
+        # Get first pipeline stage
+        first_stage = draft.requisition.stages.order_by('order').first()
+
+        # Snapshot resume data if not already present
+        if not draft.resume_snapshot and draft.candidate.resume_parsed:
+            draft.resume_snapshot = draft.candidate.resume_parsed
+
+        # Update to applied status
+        draft.status = 'applied'
+        draft.current_stage = first_stage
+        draft.save(update_fields=[
+            'application_id',
+            'status',
+            'current_stage',
+            'resume_snapshot',
+            'updated_at',
+        ])
+
+        # Log application creation event
+        ApplicationEvent.objects.create(
+            application=draft,
+            event_type='application.created',
+            actor=actor,
+            to_stage=first_stage,
+            metadata={'source': draft.source, 'from_draft': True},
+        )
+
+        return draft
+
 
 class TalentPoolService:
     """Manages talent pools for proactive recruiting."""

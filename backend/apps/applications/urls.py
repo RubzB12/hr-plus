@@ -40,6 +40,33 @@ urlpatterns = [
         name='candidate-application-withdraw',
     ),
 
+    # Draft application endpoints
+    path(
+        'applications/drafts/',
+        views.DraftApplicationListView.as_view(),
+        name='draft-application-list',
+    ),
+    path(
+        'applications/drafts/save/',
+        views.DraftApplicationSaveView.as_view(),
+        name='draft-application-save',
+    ),
+    path(
+        'applications/drafts/<uuid:pk>/',
+        views.DraftApplicationDetailView.as_view(),
+        name='draft-application-detail',
+    ),
+    path(
+        'applications/drafts/<uuid:pk>/delete/',
+        views.DraftApplicationDeleteView.as_view(),
+        name='draft-application-delete',
+    ),
+    path(
+        'applications/drafts/<uuid:pk>/submit/',
+        views.DraftApplicationSubmitView.as_view(),
+        name='draft-application-submit',
+    ),
+
     # Internal bulk endpoints (before router to avoid pk conflict)
     path(
         'internal/applications/bulk/move-stage/',

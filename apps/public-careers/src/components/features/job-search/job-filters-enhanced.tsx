@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import type { JobFacets } from '@/types/api'
-import { getJobFacets } from '@/lib/dal'
+import { fetchJobFacets } from '@/app/actions/jobs'
 
 const EMPLOYMENT_TYPE_LABELS: Record<string, string> = {
   full_time: 'Full-time',
@@ -33,10 +33,10 @@ export default function JobFiltersEnhanced() {
 
   // Fetch facets whenever filters change
   useEffect(() => {
-    const fetchFacets = async () => {
+    const loadFacets = async () => {
       try {
         setLoading(true)
-        const data = await getJobFacets({
+        const data = await fetchJobFacets({
           search: currentSearch || undefined,
           department: currentDepartment || undefined,
           location: currentLocation || undefined,
@@ -53,7 +53,7 @@ export default function JobFiltersEnhanced() {
       }
     }
 
-    fetchFacets()
+    loadFacets()
   }, [currentSearch, currentDepartment, currentLocation, currentType, currentRemote, currentLevel])
 
   const updateFilter = useCallback(
