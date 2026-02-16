@@ -248,19 +248,117 @@ class CandidateProfile(BaseModel):
 
     def calculate_completeness(self) -> int:
         """Calculate profile completeness as a percentage."""
-        fields_to_check = [
-            bool(self.user.first_name),
-            bool(self.user.last_name),
-            bool(self.phone),
-            bool(self.location_city),
-            bool(self.location_country),
-            bool(self.work_authorization),
-            bool(self.resume_file),
-            bool(self.linkedin_url or self.portfolio_url),
+        completion_data = self.get_completion_details()
+        return completion_data['percentage']
+
+    def get_completion_details(self) -> dict:
+        """
+        Get detailed profile completion information.
+        Returns percentage and lists of completed/missing items.
+        """
+        items = [
+            {
+                'field': 'first_name',
+                'label': 'First name',
+                'completed': bool(self.user.first_name),
+                'priority': 'critical',
+                'action': 'Add your first name',
+            },
+            {
+                'field': 'last_name',
+                'label': 'Last name',
+                'completed': bool(self.user.last_name),
+                'priority': 'critical',
+                'action': 'Add your last name',
+            },
+            {
+                'field': 'phone',
+                'label': 'Phone number',
+                'completed': bool(self.phone),
+                'priority': 'high',
+                'action': 'Add your phone number',
+            },
+            {
+                'field': 'location',
+                'label': 'Location',
+                'completed': bool(self.location_city and self.location_country),
+                'priority': 'high',
+                'action': 'Add your location',
+            },
+            {
+                'field': 'work_authorization',
+                'label': 'Work authorization',
+                'completed': bool(self.work_authorization),
+                'priority': 'high',
+                'action': 'Specify your work authorization status',
+            },
+            {
+                'field': 'resume',
+                'label': 'Resume/CV',
+                'completed': bool(self.resume_file),
+                'priority': 'critical',
+                'action': 'Upload your resume',
+            },
+            {
+                'field': 'links',
+                'label': 'Professional links',
+                'completed': bool(self.linkedin_url or self.portfolio_url),
+                'priority': 'medium',
+                'action': 'Add LinkedIn or portfolio URL',
+            },
+            {
+                'field': 'work_experience',
+                'label': 'Work experience',
+                'completed': self.experiences.exists(),
+                'priority': 'high',
+                'action': 'Add at least one work experience',
+            },
+            {
+                'field': 'education',
+                'label': 'Education',
+                'completed': self.education.exists(),
+                'priority': 'high',
+                'action': 'Add your education history',
+            },
+            {
+                'field': 'skills',
+                'label': 'Skills',
+                'completed': self.skills.count() >= 3,
+                'priority': 'medium',
+                'action': 'Add at least 3 skills',
+            },
         ]
-        total = len(fields_to_check)
-        completed = sum(fields_to_check)
-        return round((completed / total) * 100) if total else 0
+
+        completed_items = [item for item in items if item['completed']]
+        missing_items = [item for item in items if not item['completed']]
+
+        # Calculate percentage
+        total = len(items)
+        completed = len(completed_items)
+        percentage = round((completed / total) * 100) if total else 0
+
+        return {
+            'percentage': percentage,
+            'total_items': total,
+            'completed_count': completed,
+            'missing_count': len(missing_items),
+            'completed_items': [
+                {
+                    'field': item['field'],
+                    'label': item['label'],
+                }
+                for item in completed_items
+            ],
+            'missing_items': [
+                {
+                    'field': item['field'],
+                    'label': item['label'],
+                    'priority': item['priority'],
+                    'action': item['action'],
+                }
+                for item in missing_items
+            ],
+        }
 
 
 class WorkExperience(BaseModel):

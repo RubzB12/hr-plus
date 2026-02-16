@@ -157,6 +157,7 @@ class CandidateProfileListSerializer(serializers.ModelSerializer):
 class CandidateProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     completeness = serializers.SerializerMethodField()
+    completion_details = serializers.SerializerMethodField()
     experiences = WorkExperienceSerializer(many=True, read_only=True)
     education = EducationSerializer(many=True, read_only=True)
     skills = SkillSerializer(many=True, read_only=True)
@@ -168,7 +169,7 @@ class CandidateProfileSerializer(serializers.ModelSerializer):
             'work_authorization', 'resume_file', 'resume_parsed',
             'linkedin_url', 'portfolio_url', 'preferred_salary_min',
             'preferred_salary_max', 'preferred_job_types',
-            'profile_completeness', 'source', 'completeness',
+            'profile_completeness', 'source', 'completeness', 'completion_details',
             'experiences', 'education', 'skills',
             'created_at', 'updated_at',
         ]
@@ -176,6 +177,9 @@ class CandidateProfileSerializer(serializers.ModelSerializer):
 
     def get_completeness(self, obj):
         return obj.calculate_completeness()
+
+    def get_completion_details(self, obj):
+        return obj.get_completion_details()
 
 
 class CandidateProfileUpdateSerializer(serializers.ModelSerializer):

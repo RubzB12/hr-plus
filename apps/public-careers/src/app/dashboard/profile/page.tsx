@@ -6,6 +6,7 @@ import { ResumeUpload } from '@/components/features/profile/resume-upload'
 import { WorkExperienceSection } from '@/components/features/profile/work-experience-section'
 import { EducationSection } from '@/components/features/profile/education-section'
 import { SkillsSection } from '@/components/features/profile/skills-section'
+import { ProfileCompletionCard } from '@/components/features/profile/profile-completion-card'
 
 export const metadata: Metadata = {
   title: 'My Profile',
@@ -30,6 +31,11 @@ export default async function ProfilePage() {
           </p>
         </div>
       </div>
+
+      {/* Profile Completion Card */}
+      {profile.completion_details.percentage < 100 && (
+        <ProfileCompletionCard completionDetails={profile.completion_details} />
+      )}
 
       {/* Resume Upload Section */}
       <div className="rounded-xl border border-border bg-card p-6 shadow-sm">

@@ -1,10 +1,10 @@
 import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { getJobs, getCategories, getLocations } from '@/lib/dal'
-import JobFilters from '@/components/features/job-search/job-filters'
+import { getJobs } from '@/lib/dal'
+import JobFiltersEnhanced from '@/components/features/job-search/job-filters-enhanced'
 import ActiveFilters from '@/components/features/job-search/active-filters'
-import type { PaginatedResponse, PublicJob, JobCategory } from '@/types/api'
+import type { PaginatedResponse, PublicJob } from '@/types/api'
 
 export const metadata: Metadata = {
   title: 'Open Positions - Find Your Dream Job',
@@ -54,6 +54,7 @@ interface JobsPageProps {
     location?: string
     employment_type?: string
     remote_policy?: string
+    level?: string
     page?: string
   }>
 }
@@ -67,23 +68,9 @@ async function JobListingsContent({ searchParams }: JobsPageProps) {
     previous: null,
     results: [],
   }
-  let categories: JobCategory[] = []
-  let locations: Array<{ id: string; name: string }> = []
 
   try {
     jobs = await getJobs(params)
-  } catch {
-    // Graceful degradation
-  }
-
-  try {
-    categories = await getCategories()
-  } catch {
-    // Graceful degradation
-  }
-
-  try {
-    locations = await getLocations()
   } catch {
     // Graceful degradation
   }
@@ -98,6 +85,7 @@ async function JobListingsContent({ searchParams }: JobsPageProps) {
     if (params.location) p.set('location', params.location)
     if (params.employment_type) p.set('employment_type', params.employment_type)
     if (params.remote_policy) p.set('remote_policy', params.remote_policy)
+    if (params.level) p.set('level', params.level)
     p.set('page', page)
     return `/jobs?${p.toString()}`
   }
@@ -149,6 +137,9 @@ async function JobListingsContent({ searchParams }: JobsPageProps) {
             value={params.remote_policy}
           />
         )}
+        {params.level && (
+          <input type="hidden" name="level" value={params.level} />
+        )}
         <button
           type="submit"
           className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-white transition-all hover:bg-primary/90 hover:shadow-lg"
@@ -167,11 +158,11 @@ async function JobListingsContent({ searchParams }: JobsPageProps) {
 
       {/* Filters */}
       <div className="mt-6">
-        <JobFilters categories={categories} locations={locations} />
+        <JobFiltersEnhanced />
       </div>
 
       {/* Active Filters */}
-      {(params.department || params.employment_type || params.remote_policy || params.location) && (
+      {(params.department || params.employment_type || params.remote_policy || params.location || params.level) && (
         <div className="mt-4">
           <ActiveFilters />
         </div>

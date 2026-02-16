@@ -80,6 +80,24 @@ export async function getLocations() {
   return res.json()
 }
 
+export async function getJobFacets(params?: {
+  search?: string
+  department?: string
+  location?: string
+  employment_type?: string
+  remote_policy?: string
+  level?: string
+}) {
+  const searchParams = new URLSearchParams(params as any)
+  const res = await fetch(`${API_URL}/api/v1/jobs/facets/?${searchParams}`, {
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store', // Always get fresh counts
+  })
+
+  if (!res.ok) throw new Error('Failed to fetch job facets')
+  return res.json()
+}
+
 export async function getProfile() {
   const res = await fetch(`${API_URL}/api/v1/candidates/profile/`, {
     headers: await getAuthHeaders(),
@@ -87,6 +105,16 @@ export async function getProfile() {
   })
 
   if (!res.ok) throw new Error('Failed to fetch profile')
+  return res.json()
+}
+
+export async function getRecommendations(limit: number = 10) {
+  const res = await fetch(`${API_URL}/api/v1/candidates/recommendations/?limit=${limit}`, {
+    headers: await getAuthHeaders(),
+    cache: 'no-store', // Always get fresh recommendations
+  })
+
+  if (!res.ok) throw new Error('Failed to fetch recommendations')
   return res.json()
 }
 

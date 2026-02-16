@@ -25,6 +25,11 @@ urlpatterns = [
         name='public-job-categories',
     ),
     path(
+        'jobs/facets/',
+        views.PublicJobFacetsView.as_view(),
+        name='public-job-facets',
+    ),
+    path(
         'jobs/<slug:slug>/',
         views.PublicJobDetailView.as_view(),
         name='public-job-detail',

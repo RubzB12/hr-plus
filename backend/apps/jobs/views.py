@@ -100,6 +100,150 @@ class PublicLocationListView(generics.ListAPIView):
         return LocationSerializer
 
 
+class PublicJobFacetsView(generics.GenericAPIView):
+    """
+    Return aggregated facet counts for all filter dimensions.
+    This powers the advanced search UI with real-time filter counts.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from django.db.models import Count, Q
+
+        # Base queryset - only published, open jobs
+        base_qs = Requisition.objects.filter(status='open', published_at__isnull=False)
+
+        # Apply current filters if any (to show counts for remaining options)
+        search = request.query_params.get('search', '').strip()
+        department = request.query_params.get('department', '').strip()
+        location = request.query_params.get('location', '').strip()
+        employment_type = request.query_params.get('employment_type', '').strip()
+        remote_policy = request.query_params.get('remote_policy', '').strip()
+        level = request.query_params.get('level', '').strip()
+
+        if search:
+            base_qs = base_qs.filter(
+                Q(title__icontains=search) | Q(description__icontains=search)
+            )
+
+        # For each facet, calculate counts with and without that specific filter applied
+        # This gives users accurate counts showing "what if I apply this filter?"
+
+        # Department facets
+        dept_qs = base_qs
+        if location:
+            dept_qs = dept_qs.filter(location__name=location)
+        if employment_type:
+            dept_qs = dept_qs.filter(employment_type=employment_type)
+        if remote_policy:
+            dept_qs = dept_qs.filter(remote_policy=remote_policy)
+        if level:
+            dept_qs = dept_qs.filter(level__name=level)
+
+        departments = (
+            dept_qs
+            .values('department__id', 'department__name')
+            .annotate(count=Count('id'))
+            .order_by('department__name')
+        )
+
+        # Location facets
+        loc_qs = base_qs
+        if department:
+            loc_qs = loc_qs.filter(department__name=department)
+        if employment_type:
+            loc_qs = loc_qs.filter(employment_type=employment_type)
+        if remote_policy:
+            loc_qs = loc_qs.filter(remote_policy=remote_policy)
+        if level:
+            loc_qs = loc_qs.filter(level__name=level)
+
+        locations = (
+            loc_qs
+            .values('location__id', 'location__name')
+            .annotate(count=Count('id'))
+            .order_by('location__name')
+        )
+
+        # Employment type facets
+        type_qs = base_qs
+        if department:
+            type_qs = type_qs.filter(department__name=department)
+        if location:
+            type_qs = type_qs.filter(location__name=location)
+        if remote_policy:
+            type_qs = type_qs.filter(remote_policy=remote_policy)
+        if level:
+            type_qs = type_qs.filter(level__name=level)
+
+        employment_types = (
+            type_qs
+            .values('employment_type')
+            .annotate(count=Count('id'))
+            .order_by('employment_type')
+        )
+
+        # Remote policy facets
+        remote_qs = base_qs
+        if department:
+            remote_qs = remote_qs.filter(department__name=department)
+        if location:
+            remote_qs = remote_qs.filter(location__name=location)
+        if employment_type:
+            remote_qs = remote_qs.filter(employment_type=employment_type)
+        if level:
+            remote_qs = remote_qs.filter(level__name=level)
+
+        remote_policies = (
+            remote_qs
+            .values('remote_policy')
+            .annotate(count=Count('id'))
+            .order_by('remote_policy')
+        )
+
+        # Level facets
+        level_qs = base_qs
+        if department:
+            level_qs = level_qs.filter(department__name=department)
+        if location:
+            level_qs = level_qs.filter(location__name=location)
+        if employment_type:
+            level_qs = level_qs.filter(employment_type=employment_type)
+        if remote_policy:
+            level_qs = level_qs.filter(remote_policy=remote_policy)
+
+        levels = (
+            level_qs
+            .values('level__id', 'level__name')
+            .annotate(count=Count('id'))
+            .order_by('level__level_number')
+        )
+
+        return Response({
+            'departments': [
+                {'id': str(d['department__id']), 'name': d['department__name'], 'count': d['count']}
+                for d in departments if d['department__name']
+            ],
+            'locations': [
+                {'id': str(l['location__id']), 'name': l['location__name'], 'count': l['count']}
+                for l in locations if l['location__name']
+            ],
+            'employment_types': [
+                {'value': et['employment_type'], 'count': et['count']}
+                for et in employment_types
+            ],
+            'remote_policies': [
+                {'value': rp['remote_policy'], 'count': rp['count']}
+                for rp in remote_policies
+            ],
+            'levels': [
+                {'id': str(lv['level__id']), 'name': lv['level__name'], 'count': lv['count']}
+                for lv in levels if lv['level__name']
+            ],
+        })
+
+
 # --- Internal views (dashboard) ---
 
 class RequisitionViewSet(viewsets.ModelViewSet):

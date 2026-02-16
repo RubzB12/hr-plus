@@ -19,11 +19,15 @@ class PublicJobFilter(django_filters.FilterSet):
     remote_policy = django_filters.ChoiceFilter(
         choices=Requisition.REMOTE_POLICY_CHOICES,
     )
+    level = django_filters.CharFilter(
+        field_name='level__name',
+        lookup_expr='iexact',
+    )
     search = django_filters.CharFilter(method='filter_search')
 
     class Meta:
         model = Requisition
-        fields = ['department', 'location', 'employment_type', 'remote_policy']
+        fields = ['department', 'location', 'employment_type', 'remote_policy', 'level']
 
     def filter_location(self, queryset, _name, value):
         from django.db.models import Q

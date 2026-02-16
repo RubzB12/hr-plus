@@ -238,6 +238,48 @@ class ResumeUploadView(APIView):
         })
 
 
+class JobRecommendationsView(generics.ListAPIView):
+    """
+    Get personalized job recommendations for the authenticated candidate.
+    Returns jobs scored and ranked based on profile match.
+    """
+
+    permission_classes = [IsAuthenticated, IsCandidate]
+
+    def get(self, request):
+        from .recommendation import JobRecommendationService
+        from apps.jobs.serializers import PublicJobListSerializer
+
+        try:
+            candidate = CandidateProfile.objects.get(user=request.user)
+        except CandidateProfile.DoesNotExist:
+            return Response({
+                'detail': 'Candidate profile not found.',
+                'recommendations': [],
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # Get limit from query params (default 10, max 20)
+        limit = int(request.query_params.get('limit', 10))
+        limit = min(limit, 20)
+
+        recommendations = JobRecommendationService.get_recommendations(
+            candidate, limit=limit
+        )
+
+        # Serialize the results
+        results = []
+        for rec in recommendations:
+            job_data = PublicJobListSerializer(rec['job']).data
+            job_data['match_score'] = rec['score']
+            job_data['match_reasons'] = rec['reasons']
+            results.append(job_data)
+
+        return Response({
+            'count': len(results),
+            'recommendations': results,
+        })
+
+
 class WorkExperienceViewSet(viewsets.ModelViewSet):
     """CRUD for candidate work experience."""
 

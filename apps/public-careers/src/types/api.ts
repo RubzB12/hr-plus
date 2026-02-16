@@ -104,6 +104,25 @@ export interface Skill {
   years_experience: number | null
 }
 
+export interface ProfileCompletionItem {
+  field: string
+  label: string
+}
+
+export interface ProfileMissingItem extends ProfileCompletionItem {
+  priority: 'critical' | 'high' | 'medium' | 'low'
+  action: string
+}
+
+export interface ProfileCompletionDetails {
+  percentage: number
+  total_items: number
+  completed_count: number
+  missing_count: number
+  completed_items: ProfileCompletionItem[]
+  missing_items: ProfileMissingItem[]
+}
+
 export interface CandidateProfile {
   id: string
   user: User
@@ -121,6 +140,7 @@ export interface CandidateProfile {
   profile_completeness: number
   source: string
   completeness: number
+  completion_details: ProfileCompletionDetails
   experiences: WorkExperience[]
   education: Education[]
   skills: Skill[]
@@ -180,4 +200,29 @@ export interface JobAlert {
   sent_at: string
   was_clicked: boolean
   was_applied: boolean
+}
+
+export interface FacetOption {
+  id?: string
+  name?: string
+  value?: string
+  count: number
+}
+
+export interface JobFacets {
+  departments: FacetOption[]
+  locations: FacetOption[]
+  employment_types: FacetOption[]
+  remote_policies: FacetOption[]
+  levels: FacetOption[]
+}
+
+export interface RecommendedJob extends PublicJob {
+  match_score: number
+  match_reasons: string[]
+}
+
+export interface JobRecommendationsResponse {
+  count: number
+  recommendations: RecommendedJob[]
 }

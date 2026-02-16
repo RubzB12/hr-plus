@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { getApplications } from '@/lib/dal'
-import type { CandidateApplication, PaginatedResponse } from '@/types/api'
+import { getApplications, getProfile, getRecommendations } from '@/lib/dal'
+import type { CandidateApplication, CandidateProfile, PaginatedResponse, JobRecommendationsResponse } from '@/types/api'
+import { ProfileCompletionCard } from '@/components/features/profile/profile-completion-card'
+import { RecommendedJobs } from '@/components/features/recommendations/recommended-jobs'
 
 export const metadata: Metadata = {
   title: 'My Applications',
@@ -51,8 +53,11 @@ function getRelativeTime(dateStr: string): string {
 }
 
 export default async function ApplicationsPage() {
-  const data: PaginatedResponse<CandidateApplication> | CandidateApplication[] =
-    await getApplications()
+  const [data, profile, recommendationsData]: [
+    PaginatedResponse<CandidateApplication> | CandidateApplication[],
+    CandidateProfile,
+    JobRecommendationsResponse
+  ] = await Promise.all([getApplications(), getProfile(), getRecommendations(5)])
 
   const applications: CandidateApplication[] = Array.isArray(data)
     ? data
@@ -86,6 +91,20 @@ export default async function ApplicationsPage() {
           Browse Jobs
         </Link>
       </div>
+
+      {/* Profile Completion Card */}
+      {profile.completion_details.percentage < 100 && (
+        <div className="mt-8">
+          <ProfileCompletionCard completionDetails={profile.completion_details} />
+        </div>
+      )}
+
+      {/* Job Recommendations */}
+      {recommendationsData.recommendations.length > 0 && (
+        <div className="mt-8">
+          <RecommendedJobs recommendations={recommendationsData.recommendations} />
+        </div>
+      )}
 
       {applications.length === 0 ? (
         <div className="mt-12">
