@@ -162,3 +162,91 @@ export async function withdrawApplication(id: string) {
   }
   return res.json()
 }
+
+export async function getSavedSearches() {
+  const res = await fetch(`${API_URL}/api/v1/candidates/saved-searches/`, {
+    headers: await getAuthHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) throw new Error('Failed to fetch saved searches')
+  return res.json()
+}
+
+export async function getSavedSearch(id: string) {
+  const res = await fetch(`${API_URL}/api/v1/candidates/saved-searches/${id}/`, {
+    headers: await getAuthHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) throw new Error('Failed to fetch saved search')
+  return res.json()
+}
+
+export async function createSavedSearch(data: {
+  name: string
+  search_params: Record<string, any>
+  alert_frequency: string
+}) {
+  const res = await fetch(`${API_URL}/api/v1/candidates/saved-searches/`, {
+    method: 'POST',
+    headers: await getAuthHeaders(),
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(JSON.stringify(error))
+  }
+  return res.json()
+}
+
+export async function updateSavedSearch(id: string, data: Partial<{
+  name: string
+  search_params: Record<string, any>
+  alert_frequency: string
+  is_active: boolean
+}>) {
+  const res = await fetch(`${API_URL}/api/v1/candidates/saved-searches/${id}/`, {
+    method: 'PUT',
+    headers: await getAuthHeaders(),
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(JSON.stringify(error))
+  }
+  return res.json()
+}
+
+export async function deleteSavedSearch(id: string) {
+  const res = await fetch(`${API_URL}/api/v1/candidates/saved-searches/${id}/`, {
+    method: 'DELETE',
+    headers: await getAuthHeaders(),
+  })
+  if (!res.ok) throw new Error('Failed to delete saved search')
+}
+
+export async function getSavedSearchMatches(id: string) {
+  const res = await fetch(`${API_URL}/api/v1/candidates/saved-searches/${id}/matches/`, {
+    headers: await getAuthHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) throw new Error('Failed to fetch matches')
+  return res.json()
+}
+
+export async function toggleSavedSearchAlerts(id: string) {
+  const res = await fetch(`${API_URL}/api/v1/candidates/saved-searches/${id}/toggle-alerts/`, {
+    method: 'POST',
+    headers: await getAuthHeaders(),
+  })
+  if (!res.ok) throw new Error('Failed to toggle alerts')
+  return res.json()
+}
+
+export async function getJobAlerts() {
+  const res = await fetch(`${API_URL}/api/v1/candidates/job-alerts/`, {
+    headers: await getAuthHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) throw new Error('Failed to fetch job alerts')
+  return res.json()
+}

@@ -444,3 +444,91 @@ class JobLevel(BaseModel):
 
     def __str__(self):
         return f'{self.name} (L{self.level_number})'
+
+
+class SavedSearch(BaseModel):
+    """Candidate's saved job search with optional email alerts."""
+
+    FREQUENCY_CHOICES = [
+        ('instant', 'Instant'),
+        ('daily', 'Daily'),
+        ('weekly', 'Weekly'),
+        ('never', 'Never'),
+    ]
+
+    candidate = models.ForeignKey(
+        CandidateProfile,
+        on_delete=models.CASCADE,
+        related_name='saved_searches',
+    )
+    name = models.CharField(
+        max_length=200,
+        help_text='User-defined name for this search',
+    )
+    search_params = models.JSONField(
+        default=dict,
+        help_text='Search parameters: keywords, location, department, etc.',
+    )
+    alert_frequency = models.CharField(
+        max_length=20,
+        choices=FREQUENCY_CHOICES,
+        default='daily',
+        help_text='How often to send email alerts for new matches',
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text='Enable/disable this saved search',
+    )
+    last_notified_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='Last time alerts were sent for this search',
+    )
+    match_count = models.IntegerField(
+        default=0,
+        help_text='Number of jobs currently matching this search',
+    )
+
+    class Meta:
+        db_table = 'accounts_saved_search'
+        ordering = ['-created_at']
+        verbose_name_plural = 'Saved searches'
+
+    def __str__(self):
+        return f'{self.name} ({self.candidate.user.email})'
+
+
+class JobAlert(BaseModel):
+    """Record of a job alert sent to a candidate."""
+
+    saved_search = models.ForeignKey(
+        SavedSearch,
+        on_delete=models.CASCADE,
+        related_name='alerts',
+    )
+    requisition = models.ForeignKey(
+        'jobs.Requisition',
+        on_delete=models.CASCADE,
+        related_name='alerts_sent',
+    )
+    sent_at = models.DateTimeField(auto_now_add=True)
+    was_clicked = models.BooleanField(
+        default=False,
+        help_text='Whether candidate clicked through to the job',
+    )
+    was_applied = models.BooleanField(
+        default=False,
+        help_text='Whether candidate applied after receiving alert',
+    )
+
+    class Meta:
+        db_table = 'accounts_job_alert'
+        ordering = ['-sent_at']
+        unique_together = [['saved_search', 'requisition']]
+        indexes = [
+            models.Index(fields=['sent_at']),
+            models.Index(fields=['was_clicked']),
+        ]
+
+    def __str__(self):
+        return f'Alert: {self.requisition.title} → {self.saved_search.candidate.user.email}'

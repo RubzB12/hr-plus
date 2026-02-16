@@ -18,6 +18,8 @@ candidate_router = DefaultRouter()
 candidate_router.register(r'experiences', views.WorkExperienceViewSet, basename='candidate-experience')
 candidate_router.register(r'education', views.EducationViewSet, basename='candidate-education')
 candidate_router.register(r'skills', views.SkillViewSet, basename='candidate-skill')
+candidate_router.register(r'saved-searches', views.SavedSearchViewSet, basename='saved-search')
+candidate_router.register(r'job-alerts', views.JobAlertViewSet, basename='job-alert')
 
 # Auth endpoints
 auth_urlpatterns = [

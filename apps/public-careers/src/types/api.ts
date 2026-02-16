@@ -143,3 +143,41 @@ export interface UserProfile {
     profile_completeness: number
   }
 }
+
+export interface SearchParams {
+  keywords?: string
+  search?: string
+  department?: string
+  location?: string
+  location_city?: string
+  location_country?: string
+  employment_type?: string
+  remote_policy?: string
+  level?: string
+  salary_min?: number
+  salary_max?: number
+}
+
+export interface SavedSearch {
+  id: string
+  name: string
+  search_params: SearchParams
+  alert_frequency: 'instant' | 'daily' | 'weekly' | 'never'
+  is_active: boolean
+  match_count: number
+  last_notified_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface JobAlert {
+  id: string
+  saved_search: string
+  saved_search_name: string
+  requisition: string
+  requisition_title: string
+  requisition_slug: string
+  sent_at: string
+  was_clicked: boolean
+  was_applied: boolean
+}

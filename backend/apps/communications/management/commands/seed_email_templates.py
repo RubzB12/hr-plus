@@ -621,6 +621,100 @@ Stay connected: {{careers_page}}
                     'careers_page': 'string',
                 },
             },
+
+            # Job Alert
+            {
+                'name': 'Job Alert',
+                'category': 'candidate',
+                'subject': 'New jobs matching "{{ search_name }}" - {{ job_count }} position{{ job_count|pluralize }}',
+                'body_html': '''
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; color: white; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 600; }
+        .content { padding: 40px 30px; }
+        .job-card { border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin: 15px 0; background: #f8f9fa; }
+        .job-card h3 { margin: 0 0 10px 0; color: #667eea; font-size: 18px; }
+        .job-meta { font-size: 14px; color: #6c757d; margin: 5px 0; }
+        .button { display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 10px 0; }
+        .button:hover { background: #5568d3; }
+        .footer { background: #f8f9fa; padding: 20px 30px; text-align: center; color: #6c757d; font-size: 14px; border-top: 1px solid #e9ecef; }
+        .alert-info { background: #e7f3ff; border-left: 4px solid #2196F3; padding: 15px; margin: 20px 0; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 New Job Matches!</h1>
+        </div>
+        <div class="content">
+            <p>Hi {{ user_name }},</p>
+            <div class="alert-info">
+                <strong>{{ job_count }}</strong> new position{{ job_count|pluralize }} match{{ job_count|pluralize:"es" }} your saved search <strong>"{{ search_name }}"</strong>
+            </div>
+
+            {% for job in jobs %}
+            <div class="job-card">
+                <h3>{{ job.title }}</h3>
+                <div class="job-meta">📍 {{ job.location }}</div>
+                <div class="job-meta">🏢 {{ job.department }}</div>
+                <a href="{{ job.url }}" class="button">View Details</a>
+            </div>
+            {% endfor %}
+
+            <p style="margin-top: 30px;">
+                <a href="{{ manage_alerts_url }}" style="color: #667eea; text-decoration: none;">Manage your saved searches →</a>
+            </p>
+
+            <p style="margin-top: 20px; font-size: 14px; color: #6c757d;">
+                You're receiving this because you created a saved search with email alerts. You can change your alert preferences or unsubscribe anytime from your dashboard.
+            </p>
+        </div>
+        <div class="footer">
+            <p>This is an automated alert from HR-Plus Job Board.</p>
+            <p style="margin: 10px 0;">
+                <a href="{{ manage_alerts_url }}" style="color: #667eea; text-decoration: none;">Manage Alerts</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+''',
+                'body_text': '''
+Hi {{ user_name }},
+
+{{ job_count }} new position{{ job_count|pluralize }} match{{ job_count|pluralize:"es" }} your saved search "{{ search_name }}"
+
+{% for job in jobs %}
+---
+{{ job.title }}
+Location: {{ job.location }}
+Department: {{ job.department }}
+View: {{ job.url }}
+{% endfor %}
+
+Manage your saved searches: {{ manage_alerts_url }}
+
+You're receiving this because you created a saved search with email alerts. You can change your alert preferences or unsubscribe anytime from your dashboard.
+
+---
+HR-Plus Job Board
+''',
+                'is_active': True,
+                'variables': {
+                    'user_name': 'string',
+                    'search_name': 'string',
+                    'job_count': 'integer',
+                    'jobs': 'list of dictionaries (title, location, department, url)',
+                    'manage_alerts_url': 'string',
+                },
+            },
         ]
 
         created_count = 0

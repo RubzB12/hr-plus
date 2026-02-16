@@ -8,10 +8,12 @@ from .models import (
     Department,
     Education,
     InternalUser,
+    JobAlert,
     JobLevel,
     Location,
     Permission,
     Role,
+    SavedSearch,
     Skill,
     Team,
     User,
@@ -83,6 +85,42 @@ class LocationAdmin(admin.ModelAdmin):
 class JobLevelAdmin(admin.ModelAdmin):
     list_display = ['name', 'level_number', 'salary_band_min', 'salary_band_max']
     ordering = ['level_number']
+
+
+@admin.register(SavedSearch)
+class SavedSearchAdmin(admin.ModelAdmin):
+    list_display = ['name', 'candidate', 'alert_frequency', 'is_active', 'match_count', 'last_notified_at', 'created_at']
+    list_filter = ['alert_frequency', 'is_active', 'created_at']
+    search_fields = ['name', 'candidate__user__email', 'candidate__user__first_name', 'candidate__user__last_name']
+    raw_id_fields = ['candidate']
+    readonly_fields = ['match_count', 'last_notified_at', 'created_at', 'updated_at']
+
+    fieldsets = (
+        ('Search Details', {
+            'fields': ('candidate', 'name', 'search_params', 'is_active')
+        }),
+        ('Alert Settings', {
+            'fields': ('alert_frequency', 'last_notified_at', 'match_count')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(JobAlert)
+class JobAlertAdmin(admin.ModelAdmin):
+    list_display = ['requisition', 'saved_search', 'sent_at', 'was_clicked', 'was_applied']
+    list_filter = ['sent_at', 'was_clicked', 'was_applied']
+    search_fields = ['requisition__title', 'saved_search__name', 'saved_search__candidate__user__email']
+    raw_id_fields = ['saved_search', 'requisition']
+    readonly_fields = ['sent_at', 'was_clicked', 'was_applied']
+    date_hierarchy = 'sent_at'
+
+    def has_add_permission(self, request):
+        """Job alerts are created automatically by the system."""
+        return False
 
 
 admin.site.register(WorkExperience)

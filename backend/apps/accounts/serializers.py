@@ -8,10 +8,12 @@ from .models import (
     Department,
     Education,
     InternalUser,
+    JobAlert,
     JobLevel,
     Location,
     Permission,
     Role,
+    SavedSearch,
     Skill,
     Team,
     User,
@@ -282,3 +284,67 @@ class MeSerializer(serializers.ModelSerializer):
         if obj.is_internal and hasattr(obj, 'internal_profile'):
             return list(obj.internal_profile.all_permissions)
         return []
+
+
+class SavedSearchSerializer(serializers.ModelSerializer):
+    """Serializer for saved job searches."""
+
+    match_count = serializers.IntegerField(read_only=True)
+    last_notified_at = serializers.DateTimeField(read_only=True)
+
+    class Meta:
+        model = SavedSearch
+        fields = [
+            'id',
+            'name',
+            'search_params',
+            'alert_frequency',
+            'is_active',
+            'match_count',
+            'last_notified_at',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'match_count', 'last_notified_at', 'created_at', 'updated_at']
+
+    def validate_search_params(self, value):
+        """Validate search_params structure."""
+        if not isinstance(value, dict):
+            raise serializers.ValidationError('search_params must be a dictionary')
+
+        # Validate allowed keys
+        allowed_keys = {
+            'search', 'keywords', 'department', 'location', 'location_city',
+            'location_country', 'employment_type', 'remote_policy', 'level',
+            'salary_min', 'salary_max',
+        }
+        invalid_keys = set(value.keys()) - allowed_keys
+        if invalid_keys:
+            raise serializers.ValidationError(
+                f'Invalid search parameters: {", ".join(invalid_keys)}'
+            )
+
+        return value
+
+
+class JobAlertSerializer(serializers.ModelSerializer):
+    """Serializer for job alerts sent to candidates."""
+
+    requisition_title = serializers.CharField(source='requisition.title', read_only=True)
+    requisition_slug = serializers.CharField(source='requisition.slug', read_only=True)
+    saved_search_name = serializers.CharField(source='saved_search.name', read_only=True)
+
+    class Meta:
+        model = JobAlert
+        fields = [
+            'id',
+            'saved_search',
+            'saved_search_name',
+            'requisition',
+            'requisition_title',
+            'requisition_slug',
+            'sent_at',
+            'was_clicked',
+            'was_applied',
+        ]
+        read_only_fields = ['id', 'sent_at', 'saved_search_name', 'requisition_title', 'requisition_slug']

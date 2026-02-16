@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getJobBySlug, getSimilarJobs } from '@/lib/dal'
 import type { PublicJobDetail, PublicJob } from '@/types/api'
+import { ShareButtons } from '@/components/features/job-detail/share-buttons'
 
 interface JobDetailPageProps {
   params: Promise<{ slug: string }>
@@ -182,18 +183,51 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
                   </span>
                 )}
               </div>
+
+              {/* Mobile Action Buttons */}
+              <div className="mt-6 flex items-center gap-3 lg:hidden">
+                <ShareButtons
+                  job={{
+                    title: job.title,
+                    slug: job.slug,
+                    department: job.department,
+                    location_city: job.location_city,
+                    location_name: job.location_name,
+                  }}
+                />
+                <Link
+                  href={`/apply/${job.id}`}
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-white shadow-lg transition-all hover:bg-primary/90 hover:shadow-xl"
+                >
+                  Apply Now
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+              </div>
             </div>
 
-            {/* Quick Apply Button */}
-            <Link
-              href={`/apply/${job.id}`}
-              className="hidden lg:inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-white shadow-lg transition-all hover:bg-primary/90 hover:shadow-xl"
-            >
-              Apply Now
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </Link>
+            {/* Desktop Action Buttons */}
+            <div className="hidden lg:flex items-center gap-3">
+              <ShareButtons
+                job={{
+                  title: job.title,
+                  slug: job.slug,
+                  department: job.department,
+                  location_city: job.location_city,
+                  location_name: job.location_name,
+                }}
+              />
+              <Link
+                href={`/apply/${job.id}`}
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-white shadow-lg transition-all hover:bg-primary/90 hover:shadow-xl"
+              >
+                Apply Now
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+            </div>
           </div>
         </div>
       </section>

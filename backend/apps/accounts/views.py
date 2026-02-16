@@ -13,9 +13,11 @@ from .models import (
     Department,
     Education,
     InternalUser,
+    JobAlert,
     JobLevel,
     Location,
     Role,
+    SavedSearch,
     Skill,
     Team,
     User,
@@ -28,6 +30,7 @@ from .serializers import (
     DepartmentSerializer,
     EducationSerializer,
     InternalUserSerializer,
+    JobAlertSerializer,
     JobLevelSerializer,
     LocationSerializer,
     LoginSerializer,
@@ -36,6 +39,7 @@ from .serializers import (
     PasswordResetRequestSerializer,
     RegisterSerializer,
     RoleSerializer,
+    SavedSearchSerializer,
     SkillSerializer,
     TeamSerializer,
     WorkExperienceSerializer,
@@ -415,3 +419,137 @@ class CandidateSearchView(generics.GenericAPIView):
             'count': len(candidates),
             'results': serializer.data,
         })
+
+
+class SavedSearchViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for candidate saved job searches.
+
+    Candidates can save search criteria and optionally receive email alerts.
+    """
+
+    serializer_class = SavedSearchSerializer
+    permission_classes = [IsAuthenticated, IsCandidate]
+
+    def get_queryset(self):
+        """Return only the current candidate's saved searches."""
+        if not hasattr(self.request.user, 'candidate_profile'):
+            return SavedSearch.objects.none()
+        return SavedSearch.objects.filter(
+            candidate=self.request.user.candidate_profile
+        ).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        """Automatically associate with current candidate."""
+        serializer.save(candidate=self.request.user.candidate_profile)
+
+    @action(detail=True, methods=['get'])
+    def matches(self, request, pk=None):
+        """
+        GET /api/v1/candidates/saved-searches/{id}/matches/
+
+        Returns jobs matching this saved search.
+        """
+        saved_search = self.get_object()
+        from apps.jobs.models import Requisition
+        from apps.jobs.serializers import PublicJobSerializer
+
+        # Build queryset based on search_params
+        queryset = Requisition.objects.filter(status='open', is_published=True)
+        params = saved_search.search_params
+
+        if params.get('keywords'):
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(title__icontains=params['keywords']) |
+                Q(description__icontains=params['keywords'])
+            )
+
+        if params.get('department'):
+            queryset = queryset.filter(department__name__icontains=params['department'])
+
+        if params.get('location_city'):
+            queryset = queryset.filter(location__city__icontains=params['location_city'])
+
+        if params.get('location_country'):
+            queryset = queryset.filter(location__country=params['location_country'])
+
+        if params.get('employment_type'):
+            queryset = queryset.filter(employment_type=params['employment_type'])
+
+        if params.get('remote_policy'):
+            queryset = queryset.filter(remote_policy=params['remote_policy'])
+
+        if params.get('level'):
+            queryset = queryset.filter(level__name=params['level'])
+
+        if params.get('salary_min'):
+            queryset = queryset.filter(salary_max__gte=params['salary_min'])
+
+        if params.get('salary_max'):
+            queryset = queryset.filter(salary_min__lte=params['salary_max'])
+
+        # Update match count
+        saved_search.match_count = queryset.count()
+        saved_search.save(update_fields=['match_count'])
+
+        # Paginate results
+        queryset = queryset.select_related('department', 'location')[:20]
+        serializer = PublicJobSerializer(queryset, many=True)
+
+        return Response({
+            'count': saved_search.match_count,
+            'results': serializer.data,
+        })
+
+    @action(detail=True, methods=['post'])
+    def toggle_alerts(self, request, pk=None):
+        """
+        POST /api/v1/candidates/saved-searches/{id}/toggle-alerts/
+
+        Toggle email alerts on/off for this saved search.
+        """
+        saved_search = self.get_object()
+        saved_search.is_active = not saved_search.is_active
+        saved_search.save(update_fields=['is_active', 'updated_at'])
+
+        return Response({
+            'is_active': saved_search.is_active,
+            'message': 'Alerts enabled' if saved_search.is_active else 'Alerts disabled',
+        })
+
+
+class JobAlertViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for viewing job alerts sent to the candidate.
+
+    Read-only: candidates can view their alert history but not create/modify.
+    """
+
+    serializer_class = JobAlertSerializer
+    permission_classes = [IsAuthenticated, IsCandidate]
+
+    def get_queryset(self):
+        """Return only alerts for the current candidate's saved searches."""
+        if not hasattr(self.request.user, 'candidate_profile'):
+            return JobAlert.objects.none()
+
+        return JobAlert.objects.filter(
+            saved_search__candidate=self.request.user.candidate_profile
+        ).select_related(
+            'saved_search',
+            'requisition',
+        ).order_by('-sent_at')
+
+    @action(detail=True, methods=['post'])
+    def mark_clicked(self, request, pk=None):
+        """
+        POST /api/v1/candidates/job-alerts/{id}/mark-clicked/
+
+        Mark that the candidate clicked through to view the job.
+        """
+        alert = self.get_object()
+        alert.was_clicked = True
+        alert.save(update_fields=['was_clicked'])
+
+        return Response({'status': 'marked as clicked'})
