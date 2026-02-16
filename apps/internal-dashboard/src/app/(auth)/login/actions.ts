@@ -28,16 +28,17 @@ export async function loginAction(
 
   const apiUrl = process.env.DJANGO_API_URL
 
-  const response = await fetch(`${apiUrl}/api/v1/auth/login/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(parsed.data),
-    credentials: 'include',
-  })
+  try {
+    const response = await fetch(`${apiUrl}/api/v1/auth/login/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(parsed.data),
+      credentials: 'include',
+    })
 
-  if (!response.ok) {
-    return { error: 'Invalid email or password.' }
-  }
+    if (!response.ok) {
+      return { error: 'Invalid email or password.' }
+    }
 
   // Extract session cookie from Django response and set it
   const setCookieHeader = response.headers.get('set-cookie')
@@ -67,5 +68,13 @@ export async function loginAction(
     console.error('❌ No Set-Cookie header in response')
   }
 
-  redirect('/dashboard')
+    redirect('/dashboard')
+  } catch (error) {
+    // Re-throw redirect errors (Next.js uses these for navigation)
+    if (error instanceof Error && error.message === 'NEXT_REDIRECT') {
+      throw error
+    }
+    console.error('Login error:', error)
+    return { error: 'Invalid email or password.' }
+  }
 }

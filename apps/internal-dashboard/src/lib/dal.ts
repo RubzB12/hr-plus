@@ -333,3 +333,98 @@ export async function getCandidateDetail(id: string) {
   if (!res.ok) throw new Error('Failed to fetch candidate')
   return res.json()
 }
+
+export async function getExecutiveDashboard(params?: {
+  start_date?: string
+  end_date?: string
+  department_id?: string
+}) {
+  const searchParams = new URLSearchParams(
+    Object.entries(params ?? {}).filter(([, v]) => v != null && v !== '') as [
+      string,
+      string,
+    ][]
+  )
+
+  const res = await fetch(
+    `${API_URL}/api/v1/internal/analytics/dashboard/executive/?${searchParams}`,
+    {
+      headers: await getAuthHeaders(),
+      cache: 'no-store',
+    }
+  )
+
+  if (!res.ok) throw new Error('Failed to fetch executive dashboard')
+  return res.json()
+}
+
+export async function getTimeToFillAnalytics(params?: {
+  start_date?: string
+  end_date?: string
+  department_id?: string
+}) {
+  const searchParams = new URLSearchParams(
+    Object.entries(params ?? {}).filter(([, v]) => v != null && v !== '') as [
+      string,
+      string,
+    ][]
+  )
+
+  const res = await fetch(
+    `${API_URL}/api/v1/internal/analytics/time-to-fill/?${searchParams}`,
+    {
+      headers: await getAuthHeaders(),
+      cache: 'no-store',
+    }
+  )
+
+  if (!res.ok) throw new Error('Failed to fetch time to fill analytics')
+  return res.json()
+}
+
+export async function getSourceEffectiveness(params?: {
+  start_date?: string
+  end_date?: string
+  department_id?: string
+}) {
+  const searchParams = new URLSearchParams(
+    Object.entries(params ?? {}).filter(([, v]) => v != null && v !== '') as [
+      string,
+      string,
+    ][]
+  )
+
+  const res = await fetch(
+    `${API_URL}/api/v1/internal/analytics/source-effectiveness/?${searchParams}`,
+    {
+      headers: await getAuthHeaders(),
+      cache: 'no-store',
+    }
+  )
+
+  if (!res.ok) throw new Error('Failed to fetch source effectiveness')
+  return res.json()
+}
+
+export async function getInterviewerCalibration(params?: {
+  start_date?: string
+  end_date?: string
+}) {
+  const searchParams = new URLSearchParams(
+    Object.entries(params ?? {}).filter(([, v]) => v != null && v !== '') as [
+      string,
+      string,
+    ][]
+  )
+
+  const res = await fetch(
+    `${API_URL}/api/v1/internal/analytics/interviewer-calibration/?${searchParams}`,
+    {
+      headers: await getAuthHeaders(),
+      cache: 'no-store',
+    }
+  )
+
+  if (!res.ok) throw new Error('Failed to fetch interviewer calibration')
+  return res.json()
+}
