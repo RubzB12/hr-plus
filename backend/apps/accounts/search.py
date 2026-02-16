@@ -1,10 +1,18 @@
 """Candidate search service using Elasticsearch."""
 
-from elasticsearch_dsl import Q
-from elasticsearch_dsl.query import MultiMatch
-
-from .documents import CandidateDocument
+from django.conf import settings
 from .models import CandidateProfile
+
+# Conditionally import Elasticsearch dependencies
+ELASTICSEARCH_AVAILABLE = False
+try:
+    if settings.ELASTICSEARCH_ENABLED:
+        from elasticsearch_dsl import Q
+        from elasticsearch_dsl.query import MultiMatch
+        from .documents import CandidateDocument
+        ELASTICSEARCH_AVAILABLE = True
+except (ImportError, AttributeError):
+    pass
 
 
 class CandidateSearchService:
@@ -29,6 +37,17 @@ class CandidateSearchService:
 
         Uses Elasticsearch for full-text search with fallback to database.
         """
+        # Use database search if Elasticsearch is not available
+        if not ELASTICSEARCH_AVAILABLE:
+            return CandidateSearchService._database_search(
+                query=query,
+                skills=skills,
+                location_city=location_city,
+                location_country=location_country,
+                source=source,
+                limit=limit,
+            )
+
         try:
             return CandidateSearchService._elasticsearch_search(
                 query=query,

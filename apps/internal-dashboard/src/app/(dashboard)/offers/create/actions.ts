@@ -30,7 +30,7 @@ export async function createOffer(formData: FormData) {
       department: formData.get('department'),
       reporting_to: formData.get('reporting_to') || null,
       base_salary_input: formData.get('base_salary'),
-      salary_currency: formData.get('salary_currency') || 'USD',
+      salary_currency: formData.get('salary_currency') || 'ZAR',
       salary_frequency: formData.get('salary_frequency') || 'annual',
       bonus_input: formData.get('bonus') || null,
       equity: formData.get('equity') || '',

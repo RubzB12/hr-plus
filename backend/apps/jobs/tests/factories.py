@@ -33,7 +33,7 @@ class RequisitionFactory(factory.django.DjangoModelFactory):
     remote_policy = 'hybrid'
     salary_min = factory.LazyFunction(lambda: 80000)
     salary_max = factory.LazyFunction(lambda: 120000)
-    salary_currency = 'USD'
+    salary_currency = 'ZAR'
     description = factory.Faker('paragraph', nb_sentences=5)
     headcount = 1
     created_by = factory.LazyAttribute(lambda o: o.recruiter)

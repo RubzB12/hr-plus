@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { SavedSearch } from '@/types/api'
-import { deleteSavedSearch, toggleSavedSearchAlerts } from '@/lib/dal'
+import { deleteSavedSearchAction, toggleSavedSearchAlertsAction } from './actions'
 
 interface SavedSearchCardProps {
   savedSearch: SavedSearch
@@ -23,8 +23,13 @@ export function SavedSearchCard({ savedSearch }: SavedSearchCardProps) {
 
     setIsDeleting(true)
     try {
-      await deleteSavedSearch(savedSearch.id)
-      router.refresh()
+      const result = await deleteSavedSearchAction(savedSearch.id)
+      if (result.success) {
+        router.refresh()
+      } else {
+        alert(result.error || 'Failed to delete saved search. Please try again.')
+        setIsDeleting(false)
+      }
     } catch (error) {
       console.error('Failed to delete saved search:', error)
       alert('Failed to delete saved search. Please try again.')
@@ -35,9 +40,13 @@ export function SavedSearchCard({ savedSearch }: SavedSearchCardProps) {
   const handleToggleAlerts = async () => {
     setIsTogglingAlerts(true)
     try {
-      await toggleSavedSearchAlerts(savedSearch.id)
-      setIsActive(!isActive)
-      router.refresh()
+      const result = await toggleSavedSearchAlertsAction(savedSearch.id)
+      if (result.success) {
+        setIsActive(!isActive)
+        router.refresh()
+      } else {
+        alert(result.error || 'Failed to toggle alerts. Please try again.')
+      }
     } catch (error) {
       console.error('Failed to toggle alerts:', error)
       alert('Failed to toggle alerts. Please try again.')

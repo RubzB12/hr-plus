@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { submitDraft, deleteDraft } from '@/lib/dal'
+import { submitDraftAction, deleteDraftAction } from '@/app/dashboard/drafts/actions'
 
 interface DraftActionsProps {
   draftId: string
@@ -20,13 +20,17 @@ export function DraftActions({ draftId, jobTitle }: DraftActionsProps) {
 
     setIsSubmitting(true)
     try {
-      await submitDraft(draftId)
-      router.push('/dashboard/applications')
-      router.refresh()
+      const result = await submitDraftAction(draftId)
+      if (result.success) {
+        router.push('/dashboard/applications')
+        router.refresh()
+      } else {
+        alert(result.error || 'Failed to submit application. Please try again.')
+        setIsSubmitting(false)
+      }
     } catch (error) {
       console.error('Failed to submit draft:', error)
       alert('Failed to submit application. Please try again.')
-    } finally {
       setIsSubmitting(false)
     }
   }
@@ -36,9 +40,13 @@ export function DraftActions({ draftId, jobTitle }: DraftActionsProps) {
 
     setIsDeleting(true)
     try {
-      await deleteDraft(draftId)
-      setShowDeleteConfirm(false)
-      router.refresh()
+      const result = await deleteDraftAction(draftId)
+      if (result.success) {
+        setShowDeleteConfirm(false)
+        router.refresh()
+      } else {
+        alert(result.error || 'Failed to delete draft. Please try again.')
+      }
     } catch (error) {
       console.error('Failed to delete draft:', error)
       alert('Failed to delete draft. Please try again.')

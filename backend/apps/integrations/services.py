@@ -484,7 +484,7 @@ class JobBoardService:
                 'salary': {
                     'min': str(requisition.salary_min) if requisition.salary_min else None,
                     'max': str(requisition.salary_max) if requisition.salary_max else None,
-                    'currency': 'USD',
+                    'currency': 'ZAR',
                 },
             }
         elif provider == 'linkedin':

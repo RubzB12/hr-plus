@@ -67,7 +67,7 @@ class OfferService:
             created_by=created_by,
             status='draft',
             version=1,
-            salary_currency=kwargs.get('salary_currency', 'USD'),
+            salary_currency=kwargs.get('salary_currency', 'ZAR'),
             salary_frequency=kwargs.get('salary_frequency', 'annual'),
             bonus=str(kwargs['bonus']) if kwargs.get('bonus') else None,
             equity=kwargs.get('equity', ''),

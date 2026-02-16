@@ -32,11 +32,15 @@ THIRD_PARTY_APPS = [
     'django_filters',
     'drf_spectacular',
     'django_celery_beat',
-    'django_elasticsearch_dsl',
     'storages',
     'channels',
     'encrypted_fields',
 ]
+
+# Conditionally add Elasticsearch if enabled
+ELASTICSEARCH_ENABLED = os.environ.get('ELASTICSEARCH_ENABLED', 'false').lower() == 'true'
+if ELASTICSEARCH_ENABLED:
+    THIRD_PARTY_APPS.append('django_elasticsearch_dsl')
 
 LOCAL_APPS = [
     'apps.core',
@@ -148,6 +152,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Django REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'apps.core.authentication.SessionKeyAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
@@ -237,6 +242,11 @@ ELASTICSEARCH_DSL = {
         'hosts': os.environ.get('ELASTICSEARCH_URL', 'http://localhost:9200'),
     },
 }
+
+# Disable Elasticsearch auto-indexing signals if ES is not available
+# Set to 'false' in development if you don't have ES running
+ELASTICSEARCH_DSL_AUTOSYNC = os.environ.get('ELASTICSEARCH_DSL_AUTOSYNC', 'false').lower() == 'true'
+ELASTICSEARCH_DSL_AUTO_REFRESH = False
 
 # File storage (S3-compatible)
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '')

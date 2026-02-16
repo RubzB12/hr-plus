@@ -150,7 +150,7 @@ export default async function OffersPage() {
                 acceptedOffers
                   .reduce((sum, offer) => sum + parseFloat(offer.base_salary_display || '0'), 0)
                   .toString(),
-                'USD'
+                'ZAR'
               )}
             </div>
             <p className="text-xs text-muted-foreground">

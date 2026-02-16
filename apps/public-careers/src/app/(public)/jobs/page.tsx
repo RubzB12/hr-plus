@@ -14,9 +14,9 @@ export const metadata: Metadata = {
 
 function formatSalary(job: PublicJob): string {
   if (!job.salary_min && !job.salary_max) return ''
-  const currency = job.salary_currency ?? 'USD'
+  const currency = job.salary_currency ?? 'ZAR'
   const fmt = (v: string) =>
-    new Intl.NumberFormat('en-US', {
+    new Intl.NumberFormat('en-ZA', {
       style: 'currency',
       currency,
       maximumFractionDigits: 0,
@@ -191,13 +191,13 @@ async function JobListingsContent({ searchParams }: JobsPageProps) {
               className="group relative rounded-xl border border-border bg-card p-6 shadow-sm transition-all hover:shadow-lg hover:border-primary/50"
             >
               {/* Department badge */}
-              <div className="absolute right-4 top-4">
-                <span className="rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+              <div className="absolute right-4 top-4 max-w-[140px]">
+                <span className="inline-block rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary text-right break-words">
                   {job.level}
                 </span>
               </div>
 
-              <h2 className="pr-16 text-lg font-semibold leading-tight group-hover:text-primary transition-colors">
+              <h2 className="pr-36 text-lg font-semibold leading-tight group-hover:text-primary transition-colors">
                 {job.title}
               </h2>
               <p className="mt-2 text-sm font-medium text-muted-foreground">

@@ -807,7 +807,7 @@ class Command(BaseCommand):
                     ),
                     'salary_min': data['level'].salary_band_min,
                     'salary_max': data['level'].salary_band_max,
-                    'salary_currency': 'USD',
+                    'salary_currency': 'ZAR',
                     'description': data['description'],
                     'requirements_required': {
                         'skills': ['Python', 'Django', 'PostgreSQL'],

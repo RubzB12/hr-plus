@@ -146,7 +146,7 @@ export function ProfileForm({ profile }: { profile: CandidateProfile }) {
                 id="phone"
                 name="phone"
                 type="tel"
-                placeholder="+1 (555) 123-4567"
+                placeholder="+27 82 123 4567"
                 defaultValue={profile.phone}
                 className="block w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
@@ -176,7 +176,7 @@ export function ProfileForm({ profile }: { profile: CandidateProfile }) {
                   id="location_city"
                   name="location_city"
                   type="text"
-                  placeholder="San Francisco"
+                  placeholder="Durban"
                   defaultValue={profile.location_city}
                   className="block w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
@@ -189,7 +189,7 @@ export function ProfileForm({ profile }: { profile: CandidateProfile }) {
                   id="location_country"
                   name="location_country"
                   type="text"
-                  placeholder="United States"
+                  placeholder="South Africa"
                   defaultValue={profile.location_country}
                   className="block w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
@@ -204,7 +204,7 @@ export function ProfileForm({ profile }: { profile: CandidateProfile }) {
                 id="work_authorization"
                 name="work_authorization"
                 type="text"
-                placeholder="e.g. US Citizen, Work Visa, Green Card"
+                placeholder="e.g. SA Citizen, Work Permit, Permanent Resident"
                 defaultValue={profile.work_authorization}
                 className="block w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
               />

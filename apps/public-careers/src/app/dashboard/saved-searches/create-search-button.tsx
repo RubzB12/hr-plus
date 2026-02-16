@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { createSavedSearch } from '@/lib/dal'
+import { createSavedSearchAction } from './actions'
 import type { SearchParams } from '@/types/api'
 
 interface CreateSearchButtonProps {
@@ -37,14 +37,18 @@ export function CreateSearchButton({ variant = 'outline' }: CreateSearchButtonPr
       if (formData.employment_type) search_params.employment_type = formData.employment_type
       if (formData.remote_policy) search_params.remote_policy = formData.remote_policy
 
-      await createSavedSearch({
+      const result = await createSavedSearchAction({
         name: formData.name,
         search_params,
         alert_frequency: formData.alert_frequency,
       })
 
-      setIsOpen(false)
-      router.refresh()
+      if (result.success) {
+        setIsOpen(false)
+        router.refresh()
+      } else {
+        alert(result.error || 'Failed to create saved search. Please try again.')
+      }
     } catch (error) {
       console.error('Failed to create saved search:', error)
       alert('Failed to create saved search. Please try again.')

@@ -69,7 +69,7 @@ class Offer(BaseModel):
     base_salary = EncryptedTextField(
         help_text='Encrypted salary amount (stored as string)',
     )
-    salary_currency = models.CharField(max_length=3, default='USD')
+    salary_currency = models.CharField(max_length=3, default='ZAR')
     salary_frequency = models.CharField(
         max_length=10,
         choices=SALARY_FREQUENCY_CHOICES,

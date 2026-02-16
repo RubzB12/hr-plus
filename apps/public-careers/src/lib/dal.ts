@@ -198,7 +198,8 @@ export async function getDrafts() {
     cache: 'no-store',
   })
   if (!res.ok) throw new Error('Failed to fetch drafts')
-  return res.json()
+  const data = await res.json()
+  return data.results || []
 }
 
 export async function getDraft(id: string) {

@@ -26,7 +26,6 @@ class JobRecommendationService:
             Requisition.objects
             .filter(status='open', published_at__isnull=False)
             .select_related('department', 'location', 'level')
-            .prefetch_related('skills_required')
         )
 
         # Filter out jobs the candidate has already applied to

@@ -27,7 +27,7 @@ class OfferFactory(factory.django.DjangoModelFactory):
     level = factory.SubFactory(JobLevelFactory)
     department = factory.SubFactory(DepartmentFactory)
     base_salary = '100000.00'
-    salary_currency = 'USD'
+    salary_currency = 'ZAR'
     salary_frequency = 'annual'
     bonus = '10000.00'
     equity = 'Stock options: 1000 shares'

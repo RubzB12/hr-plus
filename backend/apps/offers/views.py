@@ -62,7 +62,7 @@ class OfferViewSet(viewsets.ModelViewSet):
             start_date=validated_data['start_date'],
             expiration_date=validated_data['expiration_date'],
             created_by=request.user.internal_profile,
-            salary_currency=validated_data.get('salary_currency', 'USD'),
+            salary_currency=validated_data.get('salary_currency', 'ZAR'),
             salary_frequency=validated_data.get('salary_frequency', 'annual'),
             bonus=validated_data.get('bonus_input'),
             equity=validated_data.get('equity', ''),

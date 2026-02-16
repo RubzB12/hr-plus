@@ -100,7 +100,7 @@ class Requisition(BaseModel):
         null=True,
         blank=True,
     )
-    salary_currency = models.CharField(max_length=3, default='USD')
+    salary_currency = models.CharField(max_length=3, default='ZAR')
     description = models.TextField(help_text='Rich text job description.')
     requirements_required = models.JSONField(
         default=list,

@@ -4,7 +4,7 @@ import type { PaginatedResponse, PublicJob, JobCategory } from '@/types/api'
 
 function formatSalary(job: PublicJob): string {
   if (!job.salary_min && !job.salary_max) return ''
-  const currency = job.salary_currency ?? 'USD'
+  const currency = job.salary_currency ?? 'ZAR'
   const fmt = (v: string) =>
     new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -56,6 +56,28 @@ export default async function HomePage() {
             Explore open positions across our teams and discover where you can
             make an impact.
           </p>
+
+          {/* Login/Register Buttons */}
+          <div className="mt-6 flex items-center justify-center gap-3">
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-2 rounded-lg border border-primary bg-background px-6 py-2.5 text-sm font-medium text-primary transition-all hover:bg-primary hover:text-white"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+              </svg>
+              Sign In
+            </Link>
+            <Link
+              href="/register"
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary/90 hover:shadow-md"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              </svg>
+              Create Account
+            </Link>
+          </div>
 
           <form
             action="/jobs"

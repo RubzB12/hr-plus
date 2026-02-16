@@ -6,10 +6,10 @@ from rest_framework.routers import DefaultRouter
 from . import views
 
 router = DefaultRouter()
-router.register(r'offers', views.OfferViewSet, basename='offer')
-router.register(r'approvals', views.OfferApprovalViewSet, basename='offerapproval')
+router.register(r'internal/offers', views.OfferViewSet, basename='offer')
+router.register(r'internal/approvals', views.OfferApprovalViewSet, basename='offerapproval')
 router.register(
-    r'negotiations', views.OfferNegotiationLogViewSet, basename='offernegotiation'
+    r'internal/negotiations', views.OfferNegotiationLogViewSet, basename='offernegotiation'
 )
 
 urlpatterns = [

@@ -41,7 +41,7 @@ export default async function SavedSearchDetailPage({
 
   const formatSalary = (job: PublicJob): string => {
     if (!job.salary_min && !job.salary_max) return ''
-    const currency = job.salary_currency ?? 'USD'
+    const currency = job.salary_currency ?? 'ZAR'
     const fmt = (v: string) =>
       new Intl.NumberFormat('en-US', {
         style: 'currency',

@@ -1,5 +1,7 @@
 """Views for accounts app."""
 
+import logging
+
 from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -7,6 +9,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.utils import get_client_ip
+
+logger = logging.getLogger(__name__)
 
 from .models import (
     CandidateProfile,
@@ -58,8 +62,16 @@ class RegisterView(APIView):
         serializer.is_valid(raise_exception=True)
         user = AuthService.register_candidate(serializer.validated_data)
         AuthService.login_user(request, user)
+
+        # CRITICAL: Save session to database before returning session key
+        request.session.save()
+
+        # Return user data with session key for Next.js to store
+        response_data = MeSerializer(user).data
+        response_data['token'] = request.session.session_key
+
         return Response(
-            MeSerializer(user).data,
+            response_data,
             status=status.HTTP_201_CREATED,
         )
 
@@ -80,7 +92,14 @@ class LoginView(APIView):
             user.internal_profile.last_login_ip = get_client_ip(request)
             user.internal_profile.save(update_fields=['last_login_ip'])
 
-        return Response(MeSerializer(user).data)
+        # Ensure session is saved to cache before returning session key
+        request.session.save()
+
+        # Return user data with session key for Next.js to store
+        response_data = MeSerializer(user).data
+        response_data['token'] = request.session.session_key
+
+        return Response(response_data)
 
 
 class LogoutView(APIView):
@@ -347,7 +366,7 @@ class CandidateAnalyticsView(generics.GenericAPIView):
         completed_interviews = interviews.filter(status='completed').count()
         upcoming_interviews = interviews.filter(
             status='scheduled',
-            scheduled_at__gte=timezone.now()
+            scheduled_start__gte=timezone.now()
         ).count()
 
         # Status Breakdown

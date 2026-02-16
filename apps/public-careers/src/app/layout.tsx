@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import Link from 'next/link'
+import { cookies } from 'next/headers'
 import './globals.css'
 
 const geistSans = Geist({
@@ -32,11 +33,14 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const cookieStore = await cookies()
+  const isLoggedIn = !!cookieStore.get('session')
+
   return (
     <html lang="en">
       <body
@@ -50,24 +54,51 @@ export default function RootLayout({
             >
               HR-Plus
             </Link>
-            <ul className="flex items-center gap-6 text-sm font-medium">
-              <li>
-                <Link
-                  href="/jobs"
-                  className="text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Jobs
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/about"
-                  className="text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  About
-                </Link>
-              </li>
-            </ul>
+            <div className="flex items-center gap-6">
+              <ul className="flex items-center gap-6 text-sm font-medium">
+                <li>
+                  <Link
+                    href="/jobs"
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    Jobs
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/about"
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    About
+                  </Link>
+                </li>
+              </ul>
+              {isLoggedIn ? (
+                <div className="flex items-center gap-2 border-l border-border pl-6">
+                  <Link
+                    href="/dashboard/applications"
+                    className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+                  >
+                    Dashboard
+                  </Link>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 border-l border-border pl-6">
+                  <Link
+                    href="/login"
+                    className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              )}
+            </div>
           </nav>
         </header>
 
