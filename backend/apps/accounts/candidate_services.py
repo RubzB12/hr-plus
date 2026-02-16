@@ -7,6 +7,7 @@ from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
 
 from .models import CandidateProfile, WorkExperience, Education, Skill
+from .resume_parser import ResumeParser
 
 logger = logging.getLogger(__name__)
 
@@ -19,14 +20,11 @@ class ResumeParsingService:
         """
         Parse resume file and extract structured data.
 
-        This is a placeholder implementation. In production, integrate with:
-        - Affinda Resume Parser
-        - Sovren Resume Parser
-        - Custom AI/ML model
-        - OpenAI GPT-4 for extraction
+        Uses comprehensive PDF parsing with pdfplumber and regex pattern matching
+        to extract contact info, skills, work experience, and education.
 
         Args:
-            resume_file: Uploaded resume file (PDF, DOCX, TXT)
+            resume_file: Uploaded resume file (PDF)
 
         Returns:
             Dictionary with extracted data:
@@ -35,26 +33,32 @@ class ResumeParsingService:
                 'skills': List[str],
                 'experiences': List[Dict],
                 'education': List[Dict],
-                'contact': Dict
+                'contact': Dict,
+                'raw_text': str
             }
         """
-        # Placeholder: Return empty structure
-        # In production, implement actual parsing logic
         logger.info(f"Parsing resume: {resume_file.name} ({resume_file.size} bytes)")
 
-        return {
-            'summary': '',
-            'skills': [],
-            'experiences': [],
-            'education': [],
-            'contact': {
-                'email': '',
-                'phone': '',
-                'linkedin': '',
-                'location': '',
-            },
-            'raw_text': '',
-        }
+        try:
+            # Use the ResumeParser to extract all structured data
+            parsed_data = ResumeParser.parse_resume(resume_file)
+            return parsed_data
+        except Exception as e:
+            logger.error(f"Error parsing resume {resume_file.name}: {e}", exc_info=True)
+            # Return empty structure on error
+            return {
+                'summary': '',
+                'skills': [],
+                'experiences': [],
+                'education': [],
+                'contact': {
+                    'email': '',
+                    'phone': '',
+                    'linkedin': '',
+                    'location': '',
+                },
+                'raw_text': '',
+            }
 
 
 class CandidateProfileService:

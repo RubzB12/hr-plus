@@ -38,8 +38,10 @@ channels-redis==4.2.1
 # Email
 django-templated-email==2.3.0
 
-# PDF Generation
+# PDF Generation & Parsing
 weasyprint==68.0
+pdfplumber==0.11.4
+python-dateutil==2.9.0
 
 # Excel Export
 openpyxl==3.1.5
