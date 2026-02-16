@@ -105,6 +105,9 @@ class PasswordResetRequestView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        from django.conf import settings
+        from apps.communications.services import EmailService
+
         serializer = PasswordResetRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         email = serializer.validated_data['email']
@@ -113,8 +116,28 @@ class PasswordResetRequestView(APIView):
         try:
             user = User.objects.get(email=email, is_active=True)
             token_data = AuthService.generate_password_reset_token(user)
-            # TODO: Send email with reset link containing token_data
-            _ = token_data
+
+            # Construct reset link for the appropriate frontend
+            # Internal users go to internal dashboard, candidates to public site
+            if user.is_internal:
+                frontend_url = settings.INTERNAL_DASHBOARD_URL
+            else:
+                frontend_url = settings.PUBLIC_CAREERS_URL
+
+            # Combine uid and token for the URL
+            reset_token = f"{token_data['uid']}:{token_data['token']}"
+            reset_link = f"{frontend_url}/reset-password?token={reset_token}"
+
+            # Send password reset email
+            EmailService.send_templated_email(
+                template_name='Password Reset',
+                recipient=user.email,
+                context={
+                    'user_name': user.get_full_name() or user.email,
+                    'reset_link': reset_link,
+                    'expiry_hours': 24,  # Django default token expiry
+                },
+            )
         except User.DoesNotExist:
             pass
 

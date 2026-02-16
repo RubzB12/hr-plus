@@ -264,6 +264,11 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@hrplus.com')
 
+# Frontend URLs (for email links and redirects)
+PUBLIC_CAREERS_URL = os.environ.get('PUBLIC_CAREERS_URL', 'http://localhost:3000')
+INTERNAL_DASHBOARD_URL = os.environ.get('INTERNAL_DASHBOARD_URL', 'http://localhost:3001')
+FRONTEND_URL = PUBLIC_CAREERS_URL  # Default frontend for onboarding, etc.
+
 # Security
 X_FRAME_OPTIONS = 'DENY'
 SECURE_CONTENT_TYPE_NOSNIFF = True
