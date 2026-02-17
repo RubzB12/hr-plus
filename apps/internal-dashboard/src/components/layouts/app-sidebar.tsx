@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
@@ -64,11 +65,14 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className="border-b px-6 py-4">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-lg font-bold text-primary-foreground">HR</span>
-          </div>
-          <span className="text-xl font-bold">HR-Plus</span>
+        <Link href="/dashboard">
+          <Image
+            src="/retailability_logo.png"
+            alt="Retailability"
+            width={140}
+            height={48}
+            priority
+          />
         </Link>
       </SidebarHeader>
 
@@ -152,7 +156,7 @@ export function AppSidebar() {
 
       <SidebarFooter className="border-t p-4">
         <div className="text-xs text-muted-foreground text-center">
-          <p className="font-semibold">HR-Plus Enterprise</p>
+          <p className="font-semibold">Retailability HR</p>
           <p>v1.0.0</p>
         </div>
       </SidebarFooter>
