@@ -196,7 +196,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
                   }}
                 />
                 <Link
-                  href={`/apply/${job.id}`}
+                  href={`/apply/${job.slug}`}
                   className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-white shadow-lg transition-all hover:bg-primary/90 hover:shadow-xl"
                 >
                   Apply Now
@@ -219,7 +219,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
                 }}
               />
               <Link
-                href={`/apply/${job.id}`}
+                href={`/apply/${job.slug}`}
                 className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-white shadow-lg transition-all hover:bg-primary/90 hover:shadow-xl"
               >
                 Apply Now
@@ -281,7 +281,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
                 Submit your application and our team will review it shortly. We typically respond within 3-5 business days.
               </p>
               <Link
-                href={`/apply/${job.id}`}
+                href={`/apply/${job.slug}`}
                 className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-8 py-3 text-sm font-medium text-white shadow-lg transition-all hover:bg-primary/90 hover:shadow-xl"
               >
                 Apply for this Position

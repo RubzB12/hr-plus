@@ -1,6 +1,6 @@
 'use client'
 
-import { Bell, LogOut, User as UserIcon, Settings } from 'lucide-react'
+import { LogOut, User as UserIcon, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -13,6 +13,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { logoutAction } from '@/app/(dashboard)/actions'
 import type { User } from '@/lib/auth'
+import { NotificationsPanel } from './notifications-panel'
 
 interface UserNavProps {
   user: User
@@ -24,9 +25,7 @@ export function UserNav({ user }: UserNavProps) {
 
   return (
     <div className="flex items-center gap-4">
-      <Button variant="ghost" size="icon" title="Notifications">
-        <Bell className="h-4 w-4" />
-      </Button>
+      <NotificationsPanel />
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

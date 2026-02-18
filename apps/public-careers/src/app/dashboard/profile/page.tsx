@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 import { getProfile } from '@/lib/dal'
 import type { CandidateProfile } from '@/types/api'
 import { ProfileForm } from './profile-form'
@@ -13,7 +14,8 @@ export const metadata: Metadata = {
 }
 
 export default async function ProfilePage() {
-  const profile: CandidateProfile = await getProfile()
+  const profile: CandidateProfile | null = await getProfile()
+  if (!profile) notFound()
 
   return (
     <div className="space-y-8">

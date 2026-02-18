@@ -55,7 +55,7 @@ function getRelativeTime(dateStr: string): string {
 export default async function ApplicationsPage() {
   const [data, profile, recommendationsData]: [
     PaginatedResponse<CandidateApplication> | CandidateApplication[],
-    CandidateProfile,
+    CandidateProfile | null,
     JobRecommendationsResponse
   ] = await Promise.all([getApplications(), getProfile(), getRecommendations(5)])
 
@@ -93,7 +93,7 @@ export default async function ApplicationsPage() {
       </div>
 
       {/* Profile Completion Card */}
-      {profile.completion_details.percentage < 100 && (
+      {profile && profile.completion_details.percentage < 100 && (
         <div className="mt-8">
           <ProfileCompletionCard completionDetails={profile.completion_details} />
         </div>

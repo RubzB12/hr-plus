@@ -8,11 +8,6 @@ async function getAuthHeaders() {
   const cookieStore = await cookies()
   const sessionCookie = cookieStore.get('session')
 
-  console.log('🔍 Cookie Debug:', {
-    sessionCookie,
-    allCookies: cookieStore.getAll(),
-  })
-
   if (!sessionCookie) {
     throw new Error('Unauthorized - No session cookie found')
   }
@@ -202,6 +197,7 @@ export async function getInterviews(params?: {
   status?: string
   from_date?: string
   to_date?: string
+  application?: string
 }) {
   const searchParams = new URLSearchParams(
     Object.entries(params ?? {}).filter(([, v]) => v != null) as [

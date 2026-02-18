@@ -1,8 +1,12 @@
 import { notFound } from 'next/navigation'
-import { getApplicationDetail } from '@/lib/dal'
+import Link from 'next/link'
+import { getApplicationDetail, getInterviews, getPipelineBoard } from '@/lib/dal'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import { PipelineProgressStepper } from '@/components/features/applications/pipeline-progress'
+import { InterviewFeedbackPanel } from '@/components/features/applications/interview-feedback-panel'
+import { ApplicationActionsPanel } from '@/components/features/applications/application-actions-panel'
 
 export const metadata = {
   title: 'Application Detail — HR-Plus',
@@ -38,6 +42,7 @@ interface ApplicationDetail {
   candidate_name: string
   candidate_email: string
   requisition_title: string
+  requisition_id: string
   requisition_id_display: string
   department: string
   status: string
@@ -88,11 +93,36 @@ export default async function ApplicationDetailPage({
 }) {
   const { id } = await params
   let application: ApplicationDetail
+  let interviews: any[] = []
+
+  let stages: { id: string; name: string; order: number; stage_type: string }[] = []
 
   try {
-    application = await getApplicationDetail(id)
+    const [appData, interviewData] = await Promise.all([
+      getApplicationDetail(id),
+      getInterviews({ application: id }).catch(() => ({ results: [] })),
+    ])
+    application = appData
+    interviews = interviewData?.results ?? []
   } catch {
     notFound()
+  }
+
+  // Fetch pipeline stages so the actions panel can offer "Move Stage"
+  if (application.requisition_id) {
+    try {
+      const pipeline = await getPipelineBoard(application.requisition_id)
+      stages = (pipeline?.stages ?? pipeline ?? []).map(
+        (s: { id: string; name: string; order: number; stage_type: string }) => ({
+          id: s.id,
+          name: s.name,
+          order: s.order,
+          stage_type: s.stage_type,
+        }),
+      )
+    } catch {
+      // Non-fatal: actions panel will hide "Move Stage" when stages is empty
+    }
   }
 
   const sortedEvents = [...application.events].sort(
@@ -102,20 +132,34 @@ export default async function ApplicationDetailPage({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-bold">{application.candidate_name}</h2>
-          <Badge variant={statusVariant[application.status] ?? 'secondary'}>
-            {statusLabel[application.status] ?? application.status}
-          </Badge>
-          {application.is_starred && (
-            <span className="text-yellow-500" title="Starred">&#9733;</span>
-          )}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-bold">{application.candidate_name}</h2>
+            <Badge variant={statusVariant[application.status] ?? 'secondary'}>
+              {statusLabel[application.status] ?? application.status}
+            </Badge>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {application.application_id} &middot; {application.candidate_email}
+          </p>
         </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {application.application_id} &middot; {application.candidate_email}
-        </p>
+        <ApplicationActionsPanel
+          applicationId={application.id}
+          isStarred={application.is_starred}
+          currentStageName={application.current_stage_name}
+          stages={stages}
+          status={application.status}
+          candidateName={application.candidate_name}
+        />
       </div>
+
+      {/* Pipeline Progress */}
+      <PipelineProgressStepper
+        currentStatus={application.status}
+        rejectedAt={application.rejected_at}
+        withdrawnAt={application.withdrawn_at}
+      />
 
       {/* Info Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -124,7 +168,16 @@ export default async function ApplicationDetailPage({
             <CardTitle className="text-sm font-medium text-muted-foreground">Requisition</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="font-medium">{application.requisition_title}</p>
+            {application.requisition_id ? (
+              <Link
+                href={`/requisitions/${application.requisition_id}`}
+                className="font-medium hover:underline text-primary"
+              >
+                {application.requisition_title}
+              </Link>
+            ) : (
+              <p className="font-medium">{application.requisition_title}</p>
+            )}
             <p className="text-sm text-muted-foreground">{application.requisition_id_display}</p>
           </CardContent>
         </Card>
@@ -233,6 +286,9 @@ export default async function ApplicationDetailPage({
           </CardContent>
         </Card>
       )}
+
+      {/* Interview Feedback */}
+      <InterviewFeedbackPanel interviews={interviews} />
 
       {/* Notes */}
       {application.notes.length > 0 && (

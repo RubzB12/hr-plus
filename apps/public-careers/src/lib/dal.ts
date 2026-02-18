@@ -104,7 +104,7 @@ export async function getProfile() {
     cache: 'no-store',
   })
 
-  if (!res.ok) throw new Error('Failed to fetch profile')
+  if (!res.ok) return null
   return res.json()
 }
 
@@ -114,7 +114,7 @@ export async function getRecommendations(limit: number = 10) {
     cache: 'no-store', // Always get fresh recommendations
   })
 
-  if (!res.ok) throw new Error('Failed to fetch recommendations')
+  if (!res.ok) return { recommendations: [] }
   return res.json()
 }
 
@@ -124,7 +124,7 @@ export async function getApplications() {
     cache: 'no-store',
   })
 
-  if (!res.ok) throw new Error('Failed to fetch applications')
+  if (!res.ok) return []
   return res.json()
 }
 
@@ -197,7 +197,7 @@ export async function getDrafts() {
     headers: await getAuthHeaders(),
     cache: 'no-store',
   })
-  if (!res.ok) throw new Error('Failed to fetch drafts')
+  if (!res.ok) return []
   const data = await res.json()
   return data.results || []
 }
@@ -342,6 +342,6 @@ export async function getCandidateAnalytics() {
     headers: await getAuthHeaders(),
     cache: 'no-store', // Always get fresh analytics
   })
-  if (!res.ok) throw new Error('Failed to fetch analytics')
+  if (!res.ok) return null
   return res.json()
 }

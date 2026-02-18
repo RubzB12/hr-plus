@@ -58,18 +58,34 @@ export async function applyAction(
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Failed to submit application.'
-    let parsed: Record<string, string[]> | undefined
+    let parsed: Record<string, unknown> | undefined
     try {
       parsed = JSON.parse(message)
     } catch {
       // not JSON
     }
+
+    // DRF returns {detail: "..."} for top-level errors (auth, permission, etc.)
+    if (parsed?.detail) {
+      const detail = String(parsed.detail)
+      return {
+        success: false,
+        message: detail.includes('already applied')
+          ? 'You have already applied to this position.'
+          : detail.includes('permission')
+            ? 'You must complete your candidate profile before applying.'
+            : detail,
+      }
+    }
+
+    // DRF field validation errors: {field: ["error", ...]}
+    const fieldErrors = parsed as Record<string, string[]> | undefined
     return {
       success: false,
-      errors: parsed,
-      message: parsed
+      errors: fieldErrors,
+      message: fieldErrors
         ? undefined
-        : typeof message === 'string' && message.includes('already applied')
+        : message.includes('already applied')
           ? 'You have already applied to this position.'
           : message,
     }

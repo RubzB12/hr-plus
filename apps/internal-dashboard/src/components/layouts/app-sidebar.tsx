@@ -15,6 +15,7 @@ import {
   Briefcase,
   MapPin,
   Building2,
+  GitBranch,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -35,6 +36,7 @@ const overviewItems = [
 ]
 
 const hiringItems = [
+  { title: 'Pipeline', href: '/pipeline', icon: GitBranch },
   { title: 'Requisitions', href: '/requisitions', icon: FileText },
   { title: 'Applications', href: '/applications', icon: Briefcase },
   { title: 'Candidates', href: '/candidates', icon: UserSearch },

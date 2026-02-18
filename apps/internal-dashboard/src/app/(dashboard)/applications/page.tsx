@@ -10,8 +10,19 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 
+
 export const metadata = {
   title: 'Applications — HR-Plus',
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  applied: 'Applied',
+  screening: 'Screening',
+  interview: 'Interview',
+  offer: 'Offer',
+  hired: 'Hired',
+  rejected: 'Rejected',
+  withdrawn: 'Withdrawn',
 }
 
 interface ApplicationListItem {
@@ -47,19 +58,39 @@ const statusLabel: Record<string, string> = {
   withdrawn: 'Withdrawn',
 }
 
-export default async function ApplicationsPage() {
+export default async function ApplicationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>
+}) {
+  const { status } = await searchParams
   let data: { results: ApplicationListItem[]; count: number } = { results: [], count: 0 }
 
   try {
-    data = await getApplications()
+    data = await getApplications({ status })
   } catch {
     // API not available yet — show empty state
   }
 
+  const activeFilter = status ? STATUS_LABELS[status] ?? status : null
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Applications</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-semibold">Applications</h2>
+          {activeFilter && (
+            <div className="flex items-center gap-1.5">
+              <Badge variant="secondary">{activeFilter}</Badge>
+              <Link
+                href="/applications"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Clear filter ×
+              </Link>
+            </div>
+          )}
+        </div>
         <p className="text-sm text-muted-foreground">{data.count} total</p>
       </div>
       <div className="rounded-md border">

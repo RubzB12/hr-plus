@@ -10,7 +10,26 @@ export const metadata: Metadata = {
 }
 
 export default async function AnalyticsPage() {
-  const analytics: CandidateAnalyticsResponse = await getCandidateAnalytics()
+  const analytics: CandidateAnalyticsResponse | null = await getCandidateAnalytics()
+
+  if (!analytics) {
+    return (
+      <div>
+        <div className="flex items-start justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h1>
+            <p className="mt-2 text-muted-foreground">Track your job search progress and performance</p>
+          </div>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-12 text-center shadow-sm">
+          <p className="text-muted-foreground">Analytics are unavailable right now. Please try again later.</p>
+          <Link href="/dashboard/applications" className="mt-4 inline-flex items-center gap-2 text-sm text-primary hover:underline">
+            View your applications instead
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   const { overview, timeline, recent_activity, interviews, status_breakdown, insights } = analytics
 

@@ -1,8 +1,10 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { Toaster } from 'sonner'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/layouts/app-sidebar'
 import { DashboardHeader } from '@/components/layouts/dashboard-header'
+import { CommandPalette } from '@/components/features/command-palette/command-palette'
 
 export default async function DashboardLayout({
   children,
@@ -25,6 +27,8 @@ export default async function DashboardLayout({
           <main className="flex-1 p-6">{children}</main>
         </div>
       </div>
+      <CommandPalette />
+      <Toaster richColors closeButton position="top-right" />
     </SidebarProvider>
   )
 }
