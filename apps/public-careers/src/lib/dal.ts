@@ -150,7 +150,7 @@ export async function getMe() {
 
 export async function updateProfile(data: Record<string, unknown>) {
   const res = await fetch(`${API_URL}/api/v1/candidates/profile/`, {
-    method: 'PUT',
+    method: 'PATCH',
     headers: await getAuthHeaders(),
     body: JSON.stringify(data),
   })

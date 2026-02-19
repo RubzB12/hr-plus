@@ -200,14 +200,17 @@ export function ProfileForm({ profile }: { profile: CandidateProfile }) {
               <label htmlFor="work_authorization" className="block text-sm font-medium mb-1.5">
                 Work authorization
               </label>
-              <input
+              <select
                 id="work_authorization"
                 name="work_authorization"
-                type="text"
-                placeholder="e.g. SA Citizen, Work Permit, Permanent Resident"
                 defaultValue={profile.work_authorization}
                 className="block w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
-              />
+              >
+                <option value="">Select work authorization...</option>
+                <option value="citizen">SA Citizen</option>
+                <option value="visa_holder">Work Permit</option>
+                <option value="permanent_resident">Permanent Resident</option>
+              </select>
               <p className="mt-1.5 text-xs text-muted-foreground">
                 Specifying your work authorization helps recruiters match you with eligible positions
               </p>

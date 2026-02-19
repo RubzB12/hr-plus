@@ -10,7 +10,6 @@ interface Education {
   field_of_study: string
   start_date: string
   end_date: string | null
-  gpa: string | null
 }
 
 interface EducationSectionProps {
@@ -27,7 +26,6 @@ export function EducationSection({ education: initialEducation }: EducationSecti
     field_of_study: '',
     start_date: '',
     end_date: null,
-    gpa: null,
   })
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +37,6 @@ export function EducationSection({ education: initialEducation }: EducationSecti
       field_of_study: '',
       start_date: '',
       end_date: null,
-      gpa: null,
     })
     setIsAdding(false)
     setEditingId(null)
@@ -47,9 +44,8 @@ export function EducationSection({ education: initialEducation }: EducationSecti
   }
 
   const handleAdd = () => {
-    setIsAdding(true)
-    setEditingId(null)
     resetForm()
+    setIsAdding(true)
   }
 
   const handleEdit = (edu: Education) => {
@@ -169,7 +165,7 @@ export function EducationSection({ education: initialEducation }: EducationSecti
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label htmlFor="start_date" className="block text-sm font-medium mb-1.5">
                   Start Date *
@@ -192,19 +188,6 @@ export function EducationSection({ education: initialEducation }: EducationSecti
                   type="date"
                   value={formData.end_date || ''}
                   onChange={(e) => setFormData({ ...formData, end_date: e.target.value || null })}
-                  className="block w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-              <div>
-                <label htmlFor="gpa" className="block text-sm font-medium mb-1.5">
-                  GPA
-                </label>
-                <input
-                  id="gpa"
-                  type="text"
-                  value={formData.gpa || ''}
-                  onChange={(e) => setFormData({ ...formData, gpa: e.target.value || null })}
-                  placeholder="3.85"
                   className="block w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </div>
@@ -264,7 +247,6 @@ export function EducationSection({ education: initialEducation }: EducationSecti
                   )}
                   <p className="mt-1 text-xs text-muted-foreground">
                     {formatDate(edu.start_date)} - {edu.end_date ? formatDate(edu.end_date) : 'Present'}
-                    {edu.gpa && ` • GPA: ${edu.gpa}`}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

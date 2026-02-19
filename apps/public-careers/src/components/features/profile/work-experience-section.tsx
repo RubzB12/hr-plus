@@ -47,9 +47,8 @@ export function WorkExperienceSection({ experiences: initialExperiences }: WorkE
   }
 
   const handleAdd = () => {
-    setIsAdding(true)
-    setEditingId(null)
     resetForm()
+    setIsAdding(true)
   }
 
   const handleEdit = (exp: WorkExperience) => {

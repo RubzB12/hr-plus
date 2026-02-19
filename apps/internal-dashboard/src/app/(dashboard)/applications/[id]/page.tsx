@@ -1,7 +1,9 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { FileText } from 'lucide-react'
 import { getApplicationDetail, getInterviews, getPipelineBoard } from '@/lib/dal'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { PipelineProgressStepper } from '@/components/features/applications/pipeline-progress'
@@ -41,6 +43,7 @@ interface ApplicationDetail {
   application_id: string
   candidate_name: string
   candidate_email: string
+  candidate_resume_file: string | null
   requisition_title: string
   requisition_id: string
   requisition_id_display: string
@@ -139,6 +142,14 @@ export default async function ApplicationDetailPage({
             <Badge variant={statusVariant[application.status] ?? 'secondary'}>
               {statusLabel[application.status] ?? application.status}
             </Badge>
+            {application.candidate_resume_file && (
+              <Button asChild variant="outline" size="sm">
+                <a href={application.candidate_resume_file} target="_blank" rel="noopener noreferrer">
+                  <FileText className="h-4 w-4 mr-1.5" />
+                  View CV
+                </a>
+              </Button>
+            )}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
             {application.application_id} &middot; {application.candidate_email}

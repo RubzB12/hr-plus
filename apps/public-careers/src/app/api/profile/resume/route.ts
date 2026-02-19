@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
   try {
     // Get session cookie
     const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('sessionid')
+    const sessionCookie = cookieStore.get('session')
     if (!sessionCookie) {
       return NextResponse.json(
         { detail: 'Unauthorized' },
@@ -37,10 +37,18 @@ export async function POST(request: NextRequest) {
     const response = await fetch(`${API_URL}/api/v1/candidates/resume/`, {
       method: 'POST',
       headers: {
-        Cookie: `sessionid=${sessionCookie.value}`,
+        Authorization: `Bearer ${sessionCookie.value}`,
       },
       body: djangoFormData,
     })
+
+    const contentType = response.headers.get('content-type') ?? ''
+    if (!contentType.includes('application/json')) {
+      return NextResponse.json(
+        { detail: 'Upload failed' },
+        { status: response.ok ? 200 : response.status }
+      )
+    }
 
     const data = await response.json()
 

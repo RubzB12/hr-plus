@@ -7,14 +7,14 @@ const API_URL = process.env.DJANGO_API_URL
 
 async function getAuthHeaders() {
   const cookieStore = await cookies()
-  const sessionCookie = cookieStore.get('sessionid')
+  const sessionCookie = cookieStore.get('session')
   if (!sessionCookie) {
     throw new Error('Unauthorized')
   }
 
   return {
     'Content-Type': 'application/json',
-    Cookie: `sessionid=${sessionCookie.value}`,
+    Authorization: `Bearer ${sessionCookie.value}`,
   }
 }
 

@@ -12,7 +12,7 @@ export default async function DashboardLayout({
   children: React.ReactNode
 }) {
   const cookieStore = await cookies()
-  const session = cookieStore.get('session')
+  const session = cookieStore.get('internal_session')
 
   if (!session) {
     redirect('/login')

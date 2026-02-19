@@ -27,6 +27,7 @@ class UserAdmin(BaseUserAdmin):
     list_filter = ['is_internal', 'is_active', 'is_staff']
     search_fields = ['email', 'first_name', 'last_name']
     ordering = ['-date_joined']
+    readonly_fields = ['is_internal']
     fieldsets = BaseUserAdmin.fieldsets + (
         ('HR-Plus', {'fields': ('is_internal',)}),
     )

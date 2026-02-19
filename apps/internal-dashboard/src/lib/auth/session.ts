@@ -43,7 +43,7 @@ export interface Session {
 
 export async function getSession(): Promise<Session | null> {
   const cookieStore = await cookies()
-  const sessionCookie = cookieStore.get('session')
+  const sessionCookie = cookieStore.get('internal_session')
 
   if (!sessionCookie) {
     return null

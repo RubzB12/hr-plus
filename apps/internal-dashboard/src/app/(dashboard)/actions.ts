@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 
 export async function logoutAction() {
   const cookieStore = await cookies()
-  const session = cookieStore.get('session')
+  const session = cookieStore.get('internal_session')
 
   if (session) {
     const apiUrl = process.env.DJANGO_API_URL
@@ -22,6 +22,6 @@ export async function logoutAction() {
   }
 
   const store = await cookies()
-  store.delete('session')
+  store.delete('internal_session')
   redirect('/login')
 }

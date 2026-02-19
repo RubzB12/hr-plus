@@ -1,20 +1,54 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { loginAction } from './actions'
 
 export function LoginForm() {
-  const [state, formAction, isPending] = useActionState(loginAction, null)
+  const [error, setError] = useState<string | null>(null)
+  const [isPending, setIsPending] = useState(false)
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError(null)
+    setIsPending(true)
+
+    const formData = new FormData(event.currentTarget)
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.get('email'),
+          password: formData.get('password'),
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error ?? 'Invalid email or password.')
+        return
+      }
+
+      // Cookie is now set — do a full navigation so the server layout
+      // reads the fresh cookie and renders the dashboard.
+      window.location.href = '/dashboard'
+    } catch {
+      setError('Unable to connect to the server. Please try again.')
+    } finally {
+      setIsPending(false)
+    }
+  }
 
   return (
-    <form action={formAction} className="space-y-4">
-      {state?.error && (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
         <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-          {state.error}
+          {error}
         </div>
       )}
       <div className="space-y-2">

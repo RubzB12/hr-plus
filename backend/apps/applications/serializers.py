@@ -184,6 +184,7 @@ class InternalApplicationDetailSerializer(serializers.ModelSerializer):
     candidate_email = serializers.EmailField(
         source='candidate.user.email', read_only=True,
     )
+    candidate_resume_file = serializers.SerializerMethodField()
     requisition_title = serializers.CharField(
         source='requisition.title', read_only=True,
     )
@@ -204,6 +205,7 @@ class InternalApplicationDetailSerializer(serializers.ModelSerializer):
         model = Application
         fields = [
             'id', 'application_id', 'candidate_name', 'candidate_email',
+            'candidate_resume_file',
             'requisition_title', 'requisition_id_display', 'department',
             'status', 'current_stage_name',
             'source', 'cover_letter', 'screening_responses',
@@ -215,6 +217,15 @@ class InternalApplicationDetailSerializer(serializers.ModelSerializer):
 
     def get_candidate_name(self, obj):
         return obj.candidate.user.get_full_name()
+
+    def get_candidate_resume_file(self, obj):
+        resume = obj.candidate.resume_file
+        if not resume:
+            return None
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(resume.url)
+        return resume.url
 
     def get_tags(self, obj):
         return TagSerializer(

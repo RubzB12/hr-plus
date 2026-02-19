@@ -66,10 +66,12 @@ export default async function ApplicationsPage({
   const { status } = await searchParams
   let data: { results: ApplicationListItem[]; count: number } = { results: [], count: 0 }
 
+  let fetchError: string | null = null
+
   try {
     data = await getApplications({ status })
-  } catch {
-    // API not available yet — show empty state
+  } catch (err) {
+    fetchError = err instanceof Error ? err.message : 'Failed to load applications'
   }
 
   const activeFilter = status ? STATUS_LABELS[status] ?? status : null
@@ -93,6 +95,11 @@ export default async function ApplicationsPage({
         </div>
         <p className="text-sm text-muted-foreground">{data.count} total</p>
       </div>
+      {fetchError && (
+        <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          Failed to load applications: {fetchError}
+        </div>
+      )}
       <div className="rounded-md border">
         <Table>
           <TableHeader>

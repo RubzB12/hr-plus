@@ -142,6 +142,9 @@ class CandidateProfileService:
 
         # Create work experiences
         for exp_data in parsed.get('experiences', []):
+            if not exp_data.get('start_date'):
+                continue
+            sid = transaction.savepoint()
             try:
                 WorkExperience.objects.create(
                     candidate=candidate,
@@ -152,12 +155,17 @@ class CandidateProfileService:
                     is_current=exp_data.get('is_current', False),
                     description=exp_data.get('description', ''),
                 )
+                transaction.savepoint_commit(sid)
                 counts['experiences'] += 1
             except Exception as e:
+                transaction.savepoint_rollback(sid)
                 logger.warning(f"Failed to create experience: {e}")
 
         # Create education records
         for edu_data in parsed.get('education', []):
+            if not edu_data.get('start_date'):
+                continue
+            sid = transaction.savepoint()
             try:
                 Education.objects.create(
                     candidate=candidate,
@@ -168,20 +176,25 @@ class CandidateProfileService:
                     end_date=edu_data.get('end_date'),
                     gpa=edu_data.get('gpa'),
                 )
+                transaction.savepoint_commit(sid)
                 counts['education'] += 1
             except Exception as e:
+                transaction.savepoint_rollback(sid)
                 logger.warning(f"Failed to create education: {e}")
 
         # Create skills
         for skill_name in parsed.get('skills', []):
+            sid = transaction.savepoint()
             try:
                 Skill.objects.get_or_create(
                     candidate=candidate,
                     name=skill_name.strip(),
                     defaults={'proficiency': ''},
                 )
+                transaction.savepoint_commit(sid)
                 counts['skills'] += 1
             except Exception as e:
+                transaction.savepoint_rollback(sid)
                 logger.warning(f"Failed to create skill: {e}")
 
         # Recalculate completeness

@@ -320,7 +320,9 @@ class InternalApplicationViewSet(viewsets.ReadOnlyModelViewSet):
             self.kwargs['pk'],
         )
         return Response(
-            InternalApplicationDetailSerializer(application).data,
+            InternalApplicationDetailSerializer(
+                application, context={'request': request},
+            ).data,
         )
 
     @action(detail=True, methods=['post'], url_path='move-stage')

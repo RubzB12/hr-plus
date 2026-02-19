@@ -23,6 +23,8 @@ export async function getSession() {
 
     if (!res.ok) return null
     const user = await res.json()
+    // Internal users should never have valid sessions on the public site
+    if (user.is_internal) return null
     return { user, accessToken: sessionCookie.value }
   } catch {
     return null

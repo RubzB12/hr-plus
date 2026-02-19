@@ -6,7 +6,7 @@ const API_URL = process.env.DJANGO_API_URL
 
 async function getAuthHeaders() {
   const cookieStore = await cookies()
-  const sessionCookie = cookieStore.get('session')
+  const sessionCookie = cookieStore.get('internal_session')
 
   if (!sessionCookie) {
     throw new Error('Unauthorized - No session cookie found')

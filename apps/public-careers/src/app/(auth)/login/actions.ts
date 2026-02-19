@@ -49,6 +49,13 @@ export async function loginAction(
 
   const data = await res.json()
 
+  if (data.is_internal) {
+    return {
+      success: false,
+      message: 'This account is not a candidate account. Please use the internal dashboard to log in.',
+    }
+  }
+
   const cookieStore = await cookies()
   cookieStore.set('session', data.token, {
     httpOnly: true,

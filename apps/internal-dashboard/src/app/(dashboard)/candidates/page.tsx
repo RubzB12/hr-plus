@@ -71,9 +71,7 @@ export default function CandidatesPage() {
         if (value) params.append(key, value)
       })
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/accounts/internal/candidates/search/?${params}`, {
-        credentials: 'include',
-      })
+      const response = await fetch(`/api/candidates/search?${params}`)
 
       if (!response.ok) throw new Error('Search failed')
 
