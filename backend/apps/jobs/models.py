@@ -236,3 +236,67 @@ class RequisitionApproval(BaseModel):
             f'{self.requisition.requisition_id} — '
             f'{self.approver} ({self.status})'
         )
+
+
+class RequisitionCriteria(BaseModel):
+    """Structured scoring criteria for a requisition."""
+
+    CRITERION_TYPE_CHOICES = [
+        ('skill', 'Skill'),
+        ('experience_years', 'Years of Experience'),
+        ('education', 'Education Level'),
+        ('job_title', 'Job Title'),
+    ]
+
+    PROFICIENCY_CHOICES = [
+        ('beginner', 'Beginner'),
+        ('intermediate', 'Intermediate'),
+        ('advanced', 'Advanced'),
+        ('expert', 'Expert'),
+    ]
+
+    requisition = models.ForeignKey(
+        Requisition,
+        on_delete=models.CASCADE,
+        related_name='criteria',
+    )
+    criterion_type = models.CharField(
+        max_length=20,
+        choices=CRITERION_TYPE_CHOICES,
+        db_index=True,
+    )
+    value = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text='Skill name, degree keyword, or job title keyword.',
+    )
+    weight = models.PositiveIntegerField(
+        default=10,
+        help_text='Relative weight 1–100.',
+    )
+    is_required = models.BooleanField(
+        default=False,
+        help_text='If true and unmet, caps final score at 40.',
+    )
+    min_proficiency = models.CharField(
+        max_length=20,
+        choices=PROFICIENCY_CHOICES,
+        blank=True,
+        help_text='Minimum proficiency level for skill criteria.',
+    )
+    min_years = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text='Minimum years for experience_years criteria.',
+    )
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = 'jobs_requisition_criteria'
+        ordering = ['requisition', 'order']
+        indexes = [
+            models.Index(fields=['requisition', 'criterion_type']),
+        ]
+
+    def __str__(self):
+        return f'{self.requisition.requisition_id} — {self.criterion_type}: {self.value}'

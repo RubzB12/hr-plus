@@ -9,6 +9,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { ScoreBadge } from '@/components/features/applications/score-badge'
 
 
 export const metadata = {
@@ -36,6 +37,7 @@ interface ApplicationListItem {
   source: string
   is_starred: boolean
   applied_at: string
+  final_score: number | null
 }
 
 const statusVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -112,12 +114,13 @@ export default async function ApplicationsPage({
               <TableHead>Source</TableHead>
               <TableHead className="text-center">Starred</TableHead>
               <TableHead>Applied Date</TableHead>
+              <TableHead className="text-center">Score</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.results.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground">
+                <TableCell colSpan={9} className="text-center text-muted-foreground">
                   No applications found.
                 </TableCell>
               </TableRow>
@@ -154,6 +157,9 @@ export default async function ApplicationsPage({
                     )}
                   </TableCell>
                   <TableCell>{new Date(app.applied_at).toLocaleDateString()}</TableCell>
+                  <TableCell className="text-center">
+                    <ScoreBadge score={app.final_score} size="sm" />
+                  </TableCell>
                 </TableRow>
               ))
             )}

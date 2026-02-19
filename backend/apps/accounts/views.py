@@ -605,6 +605,19 @@ class RoleViewSet(viewsets.ModelViewSet):
         instance.delete()
 
 
+class CandidateDetailView(generics.RetrieveAPIView):
+    """GET /api/v1/internal/candidates/{id}/ — Candidate profile detail for internal staff."""
+
+    permission_classes = [IsAuthenticated, IsInternalUser]
+    serializer_class = CandidateProfileSerializer
+    lookup_field = 'id'
+
+    def get_queryset(self):
+        return CandidateProfile.objects.select_related('user').prefetch_related(
+            'experiences', 'education', 'skills'
+        )
+
+
 class CandidateSearchView(generics.GenericAPIView):
     """Search candidates using Elasticsearch with database fallback."""
 

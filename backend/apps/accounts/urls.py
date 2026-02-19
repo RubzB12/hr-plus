@@ -45,4 +45,5 @@ urlpatterns = [
     path('candidates/', include(candidate_urlpatterns)),
     path('internal/', include(router.urls)),
     path('internal/candidates/search/', views.CandidateSearchView.as_view(), name='candidate-search'),
+    path('internal/candidates/<uuid:id>/', views.CandidateDetailView.as_view(), name='candidate-detail'),
 ]

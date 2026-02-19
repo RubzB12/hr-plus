@@ -4,6 +4,7 @@ import { ArrowLeft, Mail, Phone, MapPin, Globe, Linkedin, FileText, Briefcase, G
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { getCandidateDetail } from '@/lib/dal'
 
 export const metadata = {
   title: 'Candidate Profile — HR-Plus',
@@ -11,24 +12,6 @@ export const metadata = {
 
 interface CandidateDetailPageProps {
   params: Promise<{ id: string }>
-}
-
-async function getCandidateData(id: string) {
-  const API_URL = process.env.DJANGO_API_URL
-
-  // Note: In production, this should use proper server-side auth
-  // For now, this will fail without proper session management
-  const response = await fetch(`${API_URL}/api/v1/accounts/internal/candidates/search/?q=${id}`, {
-    cache: 'no-store',
-    // TODO: Add proper authentication headers
-  })
-
-  if (!response.ok) {
-    return null
-  }
-
-  const data = await response.json()
-  return data.results && data.results.length > 0 ? data.results[0] : null
 }
 
 function formatDate(dateString: string) {
@@ -40,9 +23,11 @@ function formatDate(dateString: string) {
 
 export default async function CandidateDetailPage({ params }: CandidateDetailPageProps) {
   const { id } = await params
-  const candidate = await getCandidateData(id)
 
-  if (!candidate) {
+  let candidate
+  try {
+    candidate = await getCandidateDetail(id)
+  } catch {
     notFound()
   }
 

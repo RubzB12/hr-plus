@@ -53,6 +53,9 @@ urlpatterns = [
     # Integrations (internal)
     path('api/v1/integrations/', include('apps.integrations.urls')),
 
+    # Scoring (criteria + rescore endpoints)
+    path('api/v1/', include('apps.scoring.urls')),
+
     # Admin
     path('admin/', admin.site.urls),
 ]

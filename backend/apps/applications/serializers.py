@@ -112,17 +112,24 @@ class InternalApplicationListSerializer(serializers.ModelSerializer):
     current_stage_name = serializers.CharField(
         source='current_stage.name', default=None, read_only=True,
     )
+    final_score = serializers.SerializerMethodField()
 
     class Meta:
         model = Application
         fields = [
             'id', 'application_id', 'candidate_name', 'candidate_email',
             'requisition_title', 'status', 'current_stage_name',
-            'source', 'is_starred', 'applied_at',
+            'source', 'is_starred', 'applied_at', 'final_score',
         ]
 
     def get_candidate_name(self, obj):
         return obj.candidate.user.get_full_name()
+
+    def get_final_score(self, obj):
+        try:
+            return obj.candidate_score.final_score
+        except Exception:
+            return None
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -154,16 +161,24 @@ class PipelineApplicationSerializer(serializers.ModelSerializer):
     current_stage_name = serializers.CharField(
         source='current_stage.name', default=None, read_only=True,
     )
+    final_score = serializers.SerializerMethodField()
 
     class Meta:
         model = Application
         fields = [
             'id', 'application_id', 'candidate_name', 'candidate_email',
             'status', 'current_stage_name', 'is_starred', 'applied_at',
+            'final_score',
         ]
 
     def get_candidate_name(self, obj):
         return obj.candidate.user.get_full_name()
+
+    def get_final_score(self, obj):
+        try:
+            return obj.candidate_score.final_score
+        except Exception:
+            return None
 
 
 class PipelineStageSerializer(serializers.Serializer):
@@ -200,6 +215,7 @@ class InternalApplicationDetailSerializer(serializers.ModelSerializer):
     events = ApplicationEventSerializer(many=True, read_only=True)
     notes = CandidateNoteSerializer(many=True, read_only=True)
     tags = serializers.SerializerMethodField()
+    candidate_score = serializers.SerializerMethodField()
 
     class Meta:
         model = Application
@@ -212,7 +228,7 @@ class InternalApplicationDetailSerializer(serializers.ModelSerializer):
             'resume_snapshot', 'is_starred',
             'rejection_reason', 'rejected_at',
             'hired_at', 'withdrawn_at', 'applied_at',
-            'events', 'notes', 'tags',
+            'events', 'notes', 'tags', 'candidate_score',
         ]
 
     def get_candidate_name(self, obj):
@@ -232,6 +248,13 @@ class InternalApplicationDetailSerializer(serializers.ModelSerializer):
             [at.tag for at in obj.application_tags.all()],
             many=True,
         ).data
+
+    def get_candidate_score(self, obj):
+        try:
+            from apps.scoring.serializers import CandidateScoreSerializer
+            return CandidateScoreSerializer(obj.candidate_score).data
+        except Exception:
+            return None
 
 
 class MoveToStageSerializer(serializers.Serializer):

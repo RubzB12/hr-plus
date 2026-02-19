@@ -424,3 +424,30 @@ export async function getInterviewerCalibration(params?: {
   if (!res.ok) throw new Error('Failed to fetch interviewer calibration')
   return res.json()
 }
+
+export async function getRequisitionCriteria(requisitionId: string) {
+  const res = await fetch(
+    `${API_URL}/api/v1/internal/requisitions/${requisitionId}/criteria/`,
+    {
+      headers: await getAuthHeaders(),
+      cache: 'no-store',
+    }
+  )
+
+  if (!res.ok) throw new Error('Failed to fetch requisition criteria')
+  return res.json()
+}
+
+export async function rescoreApplication(applicationId: string) {
+  const res = await fetch(
+    `${API_URL}/api/v1/internal/applications/${applicationId}/rescore/`,
+    {
+      method: 'POST',
+      headers: await getAuthHeaders(),
+      cache: 'no-store',
+    }
+  )
+
+  if (!res.ok) throw new Error('Failed to trigger rescore')
+  return res.json()
+}

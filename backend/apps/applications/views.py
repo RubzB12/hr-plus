@@ -289,6 +289,7 @@ class InternalApplicationViewSet(viewsets.ReadOnlyModelViewSet):
                 'candidate__user',
                 'requisition',
                 'current_stage',
+                'candidate_score',
             )
             .order_by('-applied_at')
         )

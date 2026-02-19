@@ -19,6 +19,7 @@ import { moveApplicationToStage } from '@/app/(dashboard)/requisitions/[id]/pipe
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { GitCompare, X, CheckSquare } from 'lucide-react'
+import { ScoreBadge } from '@/components/features/applications/score-badge'
 
 interface PipelineApplication {
   id: string
@@ -30,6 +31,7 @@ interface PipelineApplication {
   is_starred: boolean
   applied_at: string
   stage_entered_at?: string
+  final_score?: number | null
 }
 
 function getDaysInStage(dateStr?: string): number {
@@ -172,9 +174,12 @@ function DraggableCard({
           <p className="text-xs text-muted-foreground">
             Applied {new Date(application.applied_at).toLocaleDateString()}
           </p>
-          <span className={`text-xs ${durationClass}`} title={`${days} days in this stage`}>
-            {days}d in stage
-          </span>
+          <div className="flex items-center gap-1.5">
+            <ScoreBadge score={application.final_score} size="sm" />
+            <span className={`text-xs ${durationClass}`} title={`${days} days in this stage`}>
+              {days}d
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -218,9 +223,12 @@ function CandidateCard({
         <p className="text-xs text-muted-foreground">
           Applied {new Date(application.applied_at).toLocaleDateString()}
         </p>
-        <span className={`text-xs ${durationClass}`}>
-          {days}d in stage
-        </span>
+        <div className="flex items-center gap-1.5">
+          <ScoreBadge score={application.final_score} size="sm" />
+          <span className={`text-xs ${durationClass}`}>
+            {days}d
+          </span>
+        </div>
       </div>
     </div>
   )

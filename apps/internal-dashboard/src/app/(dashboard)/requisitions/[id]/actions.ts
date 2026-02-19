@@ -10,7 +10,7 @@ async function performAction(
   actionPath: string,
 ): Promise<{ success: boolean; error?: string }> {
   const cookieStore = await cookies()
-  const sessionCookie = cookieStore.get('session')
+  const sessionCookie = cookieStore.get('internal_session')
   if (!sessionCookie) {
     return { success: false, error: 'Unauthorized' }
   }

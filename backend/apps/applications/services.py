@@ -93,6 +93,14 @@ class ApplicationService:
             metadata={'source': source},
         )
 
+        # Trigger async scoring — deferred import avoids circular dependency.
+        # Wrapped in try/except so a Redis outage doesn't block application creation.
+        try:
+            from apps.scoring.tasks import score_application_task
+            score_application_task.delay(str(application.id))
+        except Exception:
+            pass
+
         return application
 
     @staticmethod
@@ -295,6 +303,13 @@ class ApplicationService:
             to_stage=first_stage,
             metadata={'source': draft.source, 'from_draft': True},
         )
+
+        # Trigger async scoring
+        try:
+            from apps.scoring.tasks import score_application_task
+            score_application_task.delay(str(draft.id))
+        except Exception:
+            pass
 
         return draft
 

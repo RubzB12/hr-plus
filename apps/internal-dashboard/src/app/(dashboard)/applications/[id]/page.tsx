@@ -9,6 +9,10 @@ import { Separator } from '@/components/ui/separator'
 import { PipelineProgressStepper } from '@/components/features/applications/pipeline-progress'
 import { InterviewFeedbackPanel } from '@/components/features/applications/interview-feedback-panel'
 import { ApplicationActionsPanel } from '@/components/features/applications/application-actions-panel'
+import { ScoreBreakdown } from '@/components/features/applications/score-breakdown'
+import { RescoreButton } from '@/components/features/applications/rescore-button'
+import { rescoreApplicationAction } from './actions'
+import type { CandidateScore } from '@/types/scoring'
 
 export const metadata = {
   title: 'Application Detail — HR-Plus',
@@ -63,6 +67,7 @@ interface ApplicationDetail {
   events: ApplicationEvent[]
   notes: ApplicationNote[]
   tags: ApplicationTag[]
+  candidate_score: CandidateScore | null
 }
 
 const statusVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -171,6 +176,29 @@ export default async function ApplicationDetailPage({
         rejectedAt={application.rejected_at}
         withdrawnAt={application.withdrawn_at}
       />
+
+      {/* Score Breakdown */}
+      {application.candidate_score ? (
+        <ScoreBreakdown score={application.candidate_score} />
+      ) : (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Candidate Score</CardTitle>
+              <RescoreButton
+                applicationId={application.id}
+                action={rescoreApplicationAction}
+              />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              No score computed yet. Click &ldquo;Compute Score&rdquo; to score this application
+              against the requisition criteria.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Info Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

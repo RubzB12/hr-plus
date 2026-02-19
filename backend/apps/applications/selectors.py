@@ -24,6 +24,7 @@ class ApplicationSelector:
                     'applications',
                     queryset=Application.objects.select_related(
                         'candidate__user',
+                        'candidate_score',
                     ).filter(
                         status__in=[
                             'applied', 'screening', 'interview',
@@ -58,6 +59,7 @@ class ApplicationSelector:
                 'requisition__hiring_manager__user',
                 'requisition__recruiter__user',
                 'current_stage',
+                'candidate_score',
             )
             .prefetch_related(
                 'events__actor',

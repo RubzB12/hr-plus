@@ -9,7 +9,7 @@ async function getHeaders(): Promise<
   { headers: HeadersInit } | { error: string }
 > {
   const cookieStore = await cookies()
-  const sessionCookie = cookieStore.get('session')
+  const sessionCookie = cookieStore.get('internal_session')
   if (!sessionCookie) {
     return { error: 'Unauthorized' }
   }
@@ -167,6 +167,29 @@ export async function removeTag(
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
     return { success: false, error: data.detail ?? 'Failed to remove tag' }
+  }
+
+  revalidatePath(`/applications/${applicationId}`)
+  return { success: true }
+}
+
+export async function rescoreApplicationAction(
+  applicationId: string,
+): Promise<{ success: boolean; error?: string }> {
+  const auth = await getHeaders()
+  if ('error' in auth) return { success: false, error: auth.error }
+
+  const res = await fetch(
+    `${API_URL}/api/v1/internal/applications/${applicationId}/rescore/`,
+    {
+      method: 'POST',
+      ...auth,
+    },
+  )
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    return { success: false, error: data.detail ?? 'Failed to rescore' }
   }
 
   revalidatePath(`/applications/${applicationId}`)
