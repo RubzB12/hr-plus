@@ -88,6 +88,7 @@ class Application(BaseModel):
     rejected_at = models.DateTimeField(null=True, blank=True)
     hired_at = models.DateTimeField(null=True, blank=True)
     withdrawn_at = models.DateTimeField(null=True, blank=True)
+    withdrawal_reason = models.CharField(max_length=500, blank=True, default='')
     applied_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

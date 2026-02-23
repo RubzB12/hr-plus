@@ -123,6 +123,8 @@ class Notification(BaseModel):
         ('approval', 'Approval Request'),
         ('mention', 'Mention'),
         ('system', 'System'),
+        ('stage_change', 'Application Stage Change'),
+        ('application_received', 'Application Received'),
     ]
 
     recipient = models.ForeignKey(

@@ -215,12 +215,12 @@ class TestWebhookService:
 
     def test_register_endpoint_with_secret(self):
         """Test registering endpoint with custom secret."""
-        custom_secret = 'my_custom_secret_123'
+        custom_secret = 'my_custom_secret_123'  # noqa: S105
 
         endpoint = WebhookService.register_endpoint(
             url='https://example.com/webhook',
             events=['application.created'],
-            secret=custom_secret,
+            secret=custom_secret,  # noqa: S106
         )
 
         # Secret is encrypted, so verify it's set

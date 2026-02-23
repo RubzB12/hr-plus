@@ -21,6 +21,7 @@ from .models import (
     JobLevel,
     Location,
     Role,
+    SavedJob,
     SavedSearch,
     Skill,
     Team,
@@ -43,6 +44,7 @@ from .serializers import (
     PasswordResetRequestSerializer,
     RegisterSerializer,
     RoleSerializer,
+    SavedJobSerializer,
     SavedSearchSerializer,
     SkillSerializer,
     TeamSerializer,
@@ -797,3 +799,102 @@ class JobAlertViewSet(viewsets.ReadOnlyModelViewSet):
         alert.save(update_fields=['was_clicked'])
 
         return Response({'status': 'marked as clicked'})
+
+
+class SavedJobViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for candidate bookmarked jobs.
+
+    Candidates can save/unsave individual job postings.
+    """
+
+    serializer_class = SavedJobSerializer
+    permission_classes = [IsAuthenticated, IsCandidate]
+    http_method_names = ['get', 'post', 'delete', 'head', 'options']
+
+    def get_queryset(self):
+        """Return only the current candidate's saved jobs."""
+        if not hasattr(self.request.user, 'candidate_profile'):
+            return SavedJob.objects.none()
+        return SavedJob.objects.filter(
+            candidate=self.request.user.candidate_profile
+        ).select_related(
+            'requisition__department',
+            'requisition__location',
+        ).order_by('-created_at')
+
+    def create(self, request, *args, **kwargs):
+        """Save a job — idempotent (returns 200 if already saved)."""
+        from django.db import IntegrityError
+        from apps.jobs.models import Requisition
+
+        requisition_id = request.data.get('requisition_id')
+        if not requisition_id:
+            return Response({'requisition_id': ['This field is required.']}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            requisition = Requisition.objects.get(id=requisition_id)
+        except Requisition.DoesNotExist:
+            return Response({'requisition_id': ['Job not found.']}, status=status.HTTP_404_NOT_FOUND)
+
+        candidate = request.user.candidate_profile
+        saved_job, created = SavedJob.objects.get_or_create(
+            candidate=candidate,
+            requisition=requisition,
+        )
+        serializer = self.get_serializer(saved_job)
+        return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], url_path='ids')
+    def ids(self, request):
+        """
+        GET /api/v1/candidates/saved-jobs/ids/
+
+        Returns a flat list of bookmarked requisition IDs for fast client-side lookup.
+        """
+        if not hasattr(request.user, 'candidate_profile'):
+            return Response({'ids': []})
+        ids = list(
+            SavedJob.objects.filter(
+                candidate=request.user.candidate_profile
+            ).values_list('requisition_id', flat=True)
+        )
+        return Response({'ids': [str(i) for i in ids]})
+
+
+class ResumeImportView(APIView):
+    """
+    POST /api/v1/candidates/resume/import/
+
+    Import parsed resume sections into the candidate's profile.
+    Accepts {sections: ['skills', 'experiences', 'education']}.
+    """
+
+    permission_classes = [IsAuthenticated, IsCandidate]
+
+    ALLOWED_SECTIONS = {'skills', 'experiences', 'education'}
+
+    def post(self, request):
+        sections = request.data.get('sections', [])
+        if not isinstance(sections, list) or not sections:
+            return Response(
+                {'sections': ['Provide a non-empty list of sections to import.']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        invalid = set(sections) - self.ALLOWED_SECTIONS
+        if invalid:
+            return Response(
+                {'sections': [f'Invalid sections: {", ".join(invalid)}. Allowed: skills, experiences, education']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        candidate = request.user.candidate_profile
+        if not candidate.resume_parsed:
+            return Response(
+                {'detail': 'No parsed resume data available. Please upload your resume first.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        imported = CandidateProfileService.auto_populate_from_resume_sections(candidate, sections)
+        return Response({'imported': imported})

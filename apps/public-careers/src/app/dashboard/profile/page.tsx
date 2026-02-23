@@ -8,6 +8,7 @@ import { WorkExperienceSection } from '@/components/features/profile/work-experi
 import { EducationSection } from '@/components/features/profile/education-section'
 import { SkillsSection } from '@/components/features/profile/skills-section'
 import { ProfileCompletionCard } from '@/components/features/profile/profile-completion-card'
+import { ResumeParsedPreview } from '@/components/features/profile/resume-parsed-preview'
 
 export const metadata: Metadata = {
   title: 'My Profile',
@@ -49,6 +50,11 @@ export default async function ProfilePage() {
         </div>
         <ResumeUpload currentResumeUrl={profile.resume_file} />
       </div>
+
+      {/* Resume Parsed Preview — shown when resume has been parsed */}
+      {profile.resume_parsed && Object.keys(profile.resume_parsed).length > 0 && (
+        <ResumeParsedPreview parsedData={profile.resume_parsed} />
+      )}
 
       {/* Basic Information Section */}
       <div id="basic-info" className="scroll-mt-20">

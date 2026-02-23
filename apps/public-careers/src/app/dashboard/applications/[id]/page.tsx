@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { getApplicationDetail } from '@/lib/dal'
 import type { CandidateApplicationDetail, ApplicationEvent } from '@/types/api'
 import { WithdrawButton } from './withdraw-button'
+import { StageDescriptionTooltip } from '@/components/features/applications/stage-description-tooltip'
 
 export const metadata: Metadata = {
   title: 'Application Detail',
@@ -111,6 +112,12 @@ function eventLabel(event: ApplicationEvent): string {
 const canWithdraw = (status: string) =>
   !['rejected', 'withdrawn', 'hired'].includes(status)
 
+function stageDurationBadgeClass(days: number): string {
+  if (days <= 5) return 'bg-green-100 text-green-700'
+  if (days <= 14) return 'bg-yellow-100 text-yellow-700'
+  return 'bg-red-100 text-red-700'
+}
+
 export default async function ApplicationDetailPage({
   params,
 }: ApplicationDetailPageProps) {
@@ -125,6 +132,11 @@ export default async function ApplicationDetailPage({
 
   const events: ApplicationEvent[] = application.events ?? []
   const statusStyle = statusStyles[application.status] ?? statusStyles.applied
+
+  // Compute days in current stage (from last stage_changed event, or applied_at if none)
+  const lastStageChange = events.find(e => e.event_type === 'application.stage_changed')
+  const stageSinceDate = lastStageChange?.created_at ?? application.applied_at
+  const daysInStage = Math.floor((Date.now() - new Date(stageSinceDate).getTime()) / 86_400_000)
 
   return (
     <div>
@@ -191,7 +203,15 @@ export default async function ApplicationDetailPage({
             </div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">Current stage</p>
-              <p className="text-sm font-semibold">{application.current_stage_name ?? 'N/A'}</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-semibold">{application.current_stage_name ?? 'N/A'}</p>
+                <StageDescriptionTooltip stageName={application.current_stage_name ?? ''} />
+              </div>
+              {!['rejected', 'hired', 'withdrawn'].includes(application.status) && (
+                <span className={`mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${stageDurationBadgeClass(daysInStage)}`}>
+                  {daysInStage === 0 ? 'Since today' : daysInStage === 1 ? '1 day in stage' : `${daysInStage} days in stage`}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -280,6 +300,24 @@ export default async function ApplicationDetailPage({
               </li>
             ))}
           </ol>
+        </div>
+      )}
+
+      {/* Rejection Feedback */}
+      {application.status === 'rejected' && application.rejection_reason && (
+        <div className="mt-8 rounded-xl border border-blue-200 bg-blue-50/60 p-6">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100">
+              <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h2 className="font-semibold text-blue-900">Recruiter Feedback</h2>
+              <p className="mt-0.5 text-xs text-blue-600">This feedback is provided by the hiring team</p>
+              <p className="mt-3 text-sm leading-relaxed text-blue-800">{application.rejection_reason}</p>
+            </div>
+          </div>
         </div>
       )}
 

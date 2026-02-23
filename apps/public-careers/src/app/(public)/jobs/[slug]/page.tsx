@@ -1,9 +1,16 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { getJobBySlug, getSimilarJobs } from '@/lib/dal'
-import type { PublicJobDetail, PublicJob } from '@/types/api'
+import { getJobBySlug, getSimilarJobs, getSavedJobs, getProfile, getJobMatchScore } from '@/lib/dal'
+import type { PublicJobDetail, PublicJob, SavedJob, CandidateProfile, JobMatchScore } from '@/types/api'
 import { ShareButtons } from '@/components/features/job-detail/share-buttons'
+import { BookmarkButton } from '@/components/features/job-detail/bookmark-button'
+import { QuickApplyButton } from '@/components/features/job-detail/quick-apply-button'
+import { MatchScorePanel } from '@/components/features/job-detail/match-score-panel'
+import { ReferralShare } from '@/components/features/job-detail/referral-share'
+import { DeadlineBadge } from '@/components/features/jobs/deadline-badge'
+import { CompareButton } from '@/components/features/job-comparison/compare-button'
+import { CompareBar } from '@/components/features/job-comparison/compare-bar'
 
 interface JobDetailPageProps {
   params: Promise<{ slug: string }>
@@ -121,6 +128,34 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
     // Graceful degradation
   }
 
+  // Fetch auth-dependent data in parallel (graceful degradation for logged-out users)
+  let profile: CandidateProfile | null = null
+  let isLoggedIn = false
+  let savedJobId: string | null = null
+  let matchScore: JobMatchScore | null = null
+  const hasScreeningQuestions = Array.isArray(job.screening_questions) && job.screening_questions.length > 0
+
+  const [profileResult, savedJobsResult, matchScoreResult] = await Promise.allSettled([
+    getProfile(),
+    getSavedJobs(),
+    getJobMatchScore(job.slug),
+  ])
+
+  if (profileResult.status === 'fulfilled' && profileResult.value) {
+    profile = profileResult.value as CandidateProfile
+    isLoggedIn = true
+  }
+  if (savedJobsResult.status === 'fulfilled') {
+    if (!isLoggedIn) isLoggedIn = true
+    const savedJobs = savedJobsResult.value as SavedJob[]
+    const found = savedJobs.find(sj => sj.requisition_slug === job.slug)
+    savedJobId = found?.id ?? null
+  }
+  if (matchScoreResult.status === 'fulfilled' && matchScoreResult.value) {
+    matchScore = matchScoreResult.value as JobMatchScore
+  }
+
+  const profileCompleteness = profile?.completion_details?.percentage ?? profile?.profile_completeness ?? 0
   const salary = formatSalary(job)
 
   return (
@@ -185,7 +220,8 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
               </div>
 
               {/* Mobile Action Buttons */}
-              <div className="mt-6 flex items-center gap-3 lg:hidden">
+              <div className="mt-6 flex flex-wrap items-center gap-3 lg:hidden">
+                <DeadlineBadge deadline={job.application_deadline} />
                 <ShareButtons
                   job={{
                     title: job.title,
@@ -194,6 +230,30 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
                     location_city: job.location_city,
                     location_name: job.location_name,
                   }}
+                />
+                <BookmarkButton
+                  requisitionId={job.id}
+                  initialSavedJobId={savedJobId}
+                  isLoggedIn={isLoggedIn}
+                  jobSlug={job.slug}
+                />
+                <CompareButton
+                  job={{
+                    slug: job.slug,
+                    title: job.title,
+                    department: job.department,
+                    location: job.location_city
+                      ? `${job.location_city}, ${job.location_country}`
+                      : (job.location_name ?? ''),
+                  }}
+                />
+                <QuickApplyButton
+                  requisitionId={job.id}
+                  jobTitle={job.title}
+                  profileCompleteness={profileCompleteness}
+                  hasScreeningQuestions={hasScreeningQuestions}
+                  hasApplied={false}
+                  isLoggedIn={isLoggedIn}
                 />
                 <Link
                   href={`/apply/${job.slug}`}
@@ -209,6 +269,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
 
             {/* Desktop Action Buttons */}
             <div className="hidden lg:flex items-center gap-3">
+              <DeadlineBadge deadline={job.application_deadline} />
               <ShareButtons
                 job={{
                   title: job.title,
@@ -217,6 +278,30 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
                   location_city: job.location_city,
                   location_name: job.location_name,
                 }}
+              />
+              <BookmarkButton
+                requisitionId={job.id}
+                initialSavedJobId={savedJobId}
+                isLoggedIn={isLoggedIn}
+                jobSlug={job.slug}
+              />
+              <CompareButton
+                job={{
+                  slug: job.slug,
+                  title: job.title,
+                  department: job.department,
+                  location: job.location_city
+                    ? `${job.location_city}, ${job.location_country}`
+                    : (job.location_name ?? ''),
+                }}
+              />
+              <QuickApplyButton
+                requisitionId={job.id}
+                jobTitle={job.title}
+                profileCompleteness={profileCompleteness}
+                hasScreeningQuestions={hasScreeningQuestions}
+                hasApplied={false}
+                isLoggedIn={isLoggedIn}
               />
               <Link
                 href={`/apply/${job.slug}`}
@@ -293,10 +378,18 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
           </div>
         </article>
 
-        {/* Sidebar: Similar jobs */}
-        {similarJobs.length > 0 && (
-          <aside className="mt-12 lg:mt-0 lg:w-80 lg:shrink-0">
-            <div className="sticky top-6">
+        {/* Sidebar: Match score + Referral + Similar jobs */}
+        <aside className="mt-12 lg:mt-0 lg:w-80 lg:shrink-0">
+          <div className="sticky top-6 space-y-6">
+            {matchScore !== null && (
+              <MatchScorePanel matchScore={matchScore} />
+            )}
+            <ReferralShare
+              jobTitle={job.title}
+              jobUrl={`${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/jobs/${job.slug}`}
+            />
+            {similarJobs.length > 0 && (
+              <div>
               <div className="flex items-center gap-2">
                 <svg className="h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -336,10 +429,12 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
               >
                 View all open positions →
               </Link>
+              </div>
+              )}
             </div>
           </aside>
-        )}
       </div>
+      <CompareBar />
     </>
   )
 }

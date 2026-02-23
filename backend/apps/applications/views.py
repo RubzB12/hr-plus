@@ -120,7 +120,8 @@ class CandidateApplicationWithdrawView(generics.GenericAPIView):
         application = get_object_or_404(
             Application, id=pk, candidate__user=request.user,
         )
-        ApplicationService.withdraw(application, actor=request.user)
+        reason = request.data.get('reason', '') if hasattr(request.data, 'get') else ''
+        ApplicationService.withdraw(application, actor=request.user, reason=reason)
         return Response(
             CandidateApplicationDetailSerializer(application).data,
             status=status.HTTP_200_OK,

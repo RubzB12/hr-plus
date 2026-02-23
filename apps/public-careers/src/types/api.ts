@@ -13,6 +13,7 @@ export interface PublicJob {
   salary_currency: string
   level: string
   published_at: string
+  application_deadline: string | null
 }
 
 export interface PublicJobDetail extends PublicJob {
@@ -61,6 +62,8 @@ export interface CandidateApplicationDetail extends CandidateApplication {
   cover_letter: string
   screening_responses: Record<string, string>
   withdrawn_at: string | null
+  rejection_reason: string
+  withdrawal_reason: string
   events: ApplicationEvent[]
 }
 
@@ -274,4 +277,54 @@ export interface CandidateAnalyticsResponse {
   interviews: InterviewStats
   status_breakdown: StatusBreakdown[]
   insights: Insight[]
+}
+
+export interface SavedJob {
+  id: string
+  requisition_id: string
+  requisition_title: string
+  requisition_slug: string
+  requisition_department: string
+  requisition_location: string
+  requisition_employment_type: string
+  requisition_remote_policy: string
+  requisition_application_deadline: string | null
+  created_at: string
+}
+
+export interface CandidateNotification {
+  id: string
+  type: string
+  title: string
+  body: string
+  link: string
+  is_read: boolean
+  read_at: string | null
+  metadata: Record<string, unknown>
+  created_at: string
+}
+
+export interface JobMatchScore {
+  overall_score: number | null
+  skills_matched: string[]
+  skills_missing: string[]
+  experience_match: boolean
+  education_match: boolean
+  meets_required_criteria: boolean
+  message?: string
+}
+
+export interface CandidateInterview {
+  id: string
+  type: string
+  type_display: string
+  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'rescheduled' | 'no_show'
+  scheduled_start: string
+  scheduled_end: string
+  timezone: string
+  location: string
+  video_link: string
+  prep_notes_candidate: string
+  requisition_title: string
+  application_id_display: string
 }

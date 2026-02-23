@@ -105,7 +105,7 @@ class ApplicationService:
 
     @staticmethod
     @transaction.atomic
-    def withdraw(application: Application, actor) -> Application:
+    def withdraw(application: Application, actor, *, reason: str = '') -> Application:
         """Withdraw an application."""
         if application.status in ('withdrawn', 'rejected', 'hired'):
             raise BusinessValidationError(
@@ -115,7 +115,8 @@ class ApplicationService:
 
         application.status = 'withdrawn'
         application.withdrawn_at = timezone.now()
-        application.save(update_fields=['status', 'withdrawn_at', 'updated_at'])
+        application.withdrawal_reason = reason
+        application.save(update_fields=['status', 'withdrawn_at', 'withdrawal_reason', 'updated_at'])
 
         ApplicationEvent.objects.create(
             application=application,

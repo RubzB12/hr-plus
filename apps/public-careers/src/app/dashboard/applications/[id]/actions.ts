@@ -20,8 +20,11 @@ export async function withdrawAction(
     return { success: false, message: 'Invalid application ID.' }
   }
 
+  const reason = formData.get('reason')
+  const reasonStr = typeof reason === 'string' ? reason : ''
+
   try {
-    await withdrawApplication(applicationId)
+    await withdrawApplication(applicationId, reasonStr)
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Failed to withdraw application.'

@@ -630,3 +630,26 @@ class JobAlert(BaseModel):
 
     def __str__(self):
         return f'Alert: {self.requisition.title} → {self.saved_search.candidate.user.email}'
+
+
+class SavedJob(BaseModel):
+    """A job posting bookmarked by a candidate."""
+
+    candidate = models.ForeignKey(
+        CandidateProfile,
+        on_delete=models.CASCADE,
+        related_name='saved_jobs',
+    )
+    requisition = models.ForeignKey(
+        'jobs.Requisition',
+        on_delete=models.CASCADE,
+        related_name='saved_by_candidates',
+    )
+
+    class Meta:
+        db_table = 'accounts_saved_job'
+        ordering = ['-created_at']
+        unique_together = [['candidate', 'requisition']]
+
+    def __str__(self):
+        return f'{self.candidate.user.email} → {self.requisition.title}'

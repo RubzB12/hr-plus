@@ -3,6 +3,7 @@
 import { useActionState, useState } from 'react'
 import { applyAction, type ApplyState } from './actions'
 import type { PublicJobDetail } from '@/types/api'
+import { COVER_LETTER_TEMPLATES, type TemplateName } from './cover-letter-templates'
 
 const initialState: ApplyState = { success: false }
 
@@ -150,12 +151,34 @@ export function ApplyForm({ job, userName, userEmail }: ApplyFormProps) {
           <p className="text-sm text-muted-foreground">
             Optional. Tell us why you are a great fit for this role.
           </p>
+
+          {/* Template buttons */}
+          <div>
+            <p className="mb-2 text-xs font-medium text-muted-foreground">Start from a template:</p>
+            <div className="flex flex-wrap gap-2">
+              {(Object.keys(COVER_LETTER_TEMPLATES) as TemplateName[]).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() =>
+                    setCoverLetter(
+                      COVER_LETTER_TEMPLATES[key](job.title, 'HR-Plus')
+                    )
+                  }
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium capitalize transition-colors hover:bg-muted hover:border-primary/40"
+                >
+                  {key}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <textarea
             rows={8}
             value={coverLetter}
             onChange={(e) => setCoverLetter(e.target.value)}
             maxLength={5000}
-            placeholder="Write your cover letter here..."
+            placeholder="Write your cover letter here, or pick a template above..."
             className="block w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
           />
           <p className="text-xs text-muted-foreground text-right">

@@ -4,9 +4,10 @@ from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.accounts.models import InternalUser
-from apps.accounts.permissions import IsInternalUser
+from apps.accounts.permissions import IsCandidate, IsInternalUser
 
 from .filters import PublicJobFilter, RequisitionFilter
 from .models import Requisition, RequisitionApproval
@@ -407,3 +408,73 @@ class PendingApprovalsView(generics.ListAPIView):
             )
             .order_by('created_at')
         )
+
+
+class JobMatchScoreView(APIView):
+    """
+    GET /api/v1/jobs/{slug}/match-score/
+
+    Returns how well the authenticated candidate matches a specific job.
+    Uses the existing profile scoring engine against the job's criteria.
+    """
+
+    permission_classes = [IsAuthenticated, IsCandidate]
+
+    def get(self, request, slug):
+        from apps.scoring.calculators.profile_scorer import score_profile
+
+        try:
+            requisition = (
+                Requisition.objects
+                .prefetch_related('criteria')
+                .get(slug=slug, status='open')
+            )
+        except Requisition.DoesNotExist:
+            return Response({'detail': 'Job not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        candidate = (
+            request.user.candidate_profile.__class__.objects
+            .prefetch_related('skills', 'experiences', 'education')
+            .get(pk=request.user.candidate_profile.pk)
+        )
+
+        result = score_profile(candidate, requisition)
+
+        if result['score'] is None:
+            return Response({
+                'overall_score': None,
+                'skills_matched': [],
+                'skills_missing': [],
+                'experience_match': True,
+                'education_match': True,
+                'meets_required_criteria': True,
+                'message': 'No scoring criteria defined for this job.',
+            })
+
+        breakdown = result['breakdown']
+
+        skills_matched = [
+            item['value']
+            for item in breakdown
+            if item['criterion_type'] == 'skill' and item['factor'] > 0
+        ]
+        skills_missing = [
+            item['value']
+            for item in breakdown
+            if item['criterion_type'] == 'skill' and item['factor'] == 0
+        ]
+
+        exp_items = [i for i in breakdown if i['criterion_type'] == 'experience_years']
+        experience_match = all(i['factor'] >= 1.0 for i in exp_items) if exp_items else True
+
+        edu_items = [i for i in breakdown if i['criterion_type'] == 'education']
+        education_match = all(i['factor'] >= 1.0 for i in edu_items) if edu_items else True
+
+        return Response({
+            'overall_score': result['score'],
+            'skills_matched': skills_matched,
+            'skills_missing': skills_missing,
+            'experience_match': experience_match,
+            'education_match': education_match,
+            'meets_required_criteria': result['meets_required_criteria'],
+        })

@@ -1,6 +1,7 @@
 """API views for interviews app."""
 
 from rest_framework import generics, status, viewsets
+from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -285,4 +286,60 @@ class CandidateInterviewListView(generics.ListAPIView):
     def get_queryset(self):
         return InterviewSelector.get_upcoming_interviews(
             user=self.request.user,
+        )
+
+
+class CandidateAllInterviewsView(generics.ListAPIView):
+    """
+    GET /api/v1/interviews/
+
+    List all interviews (upcoming and past) for the authenticated candidate.
+    """
+
+    permission_classes = [IsAuthenticated, IsCandidate]
+    serializer_class = CandidateInterviewSerializer
+
+    def get_queryset(self):
+        return (
+            Interview.objects
+            .filter(application__candidate__user=self.request.user)
+            .select_related(
+                'application__requisition',
+                'interview_plan_stage',
+            )
+            .order_by('-scheduled_start')
+        )
+
+
+class CandidateInterviewConfirmView(APIView):
+    """
+    POST /api/v1/interviews/{pk}/confirm/
+
+    Allows a candidate to confirm their attendance for a scheduled interview.
+    Only valid for interviews in 'scheduled' or 'rescheduled' status.
+    """
+
+    permission_classes = [IsAuthenticated, IsCandidate]
+
+    def post(self, request, pk):
+        try:
+            interview = Interview.objects.select_related(
+                'application__requisition',
+                'interview_plan_stage',
+            ).get(pk=pk, application__candidate__user=request.user)
+        except Interview.DoesNotExist:
+            return Response({'detail': 'Interview not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if interview.status not in ('scheduled', 'rescheduled'):
+            return Response(
+                {'detail': f'Cannot confirm an interview with status "{interview.status}".'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        interview.status = 'confirmed'
+        interview.save(update_fields=['status', 'updated_at'])
+
+        return Response(
+            CandidateInterviewSerializer(interview).data,
+            status=status.HTTP_200_OK,
         )

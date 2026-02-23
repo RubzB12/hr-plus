@@ -1,10 +1,14 @@
 import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { getJobs } from '@/lib/dal'
+import { getJobs, getSavedJobs } from '@/lib/dal'
 import JobFiltersEnhanced from '@/components/features/job-search/job-filters-enhanced'
 import ActiveFilters from '@/components/features/job-search/active-filters'
-import type { PaginatedResponse, PublicJob } from '@/types/api'
+import { BookmarkButton } from '@/components/features/job-detail/bookmark-button'
+import { DeadlineBadge } from '@/components/features/jobs/deadline-badge'
+import { CompareButton } from '@/components/features/job-comparison/compare-button'
+import { CompareBar } from '@/components/features/job-comparison/compare-bar'
+import type { PaginatedResponse, PublicJob, SavedJob } from '@/types/api'
 
 export const metadata: Metadata = {
   title: 'Open Positions - Find Your Dream Job',
@@ -73,6 +77,17 @@ async function JobListingsContent({ searchParams }: JobsPageProps) {
     jobs = await getJobs(params)
   } catch {
     // Graceful degradation
+  }
+
+  // Build a slug->savedJobId map for bookmark state (logged-out users get an empty map)
+  let savedJobMap: Record<string, string> = {}
+  let isLoggedIn = false
+  try {
+    const savedJobs: SavedJob[] = await getSavedJobs()
+    isLoggedIn = true
+    savedJobMap = Object.fromEntries(savedJobs.map(sj => [sj.requisition_slug, sj.id]))
+  } catch {
+    // Not logged in or API unavailable — bookmark buttons will show login prompt
   }
 
   const nextPage = getPageFromUrl(jobs.next)
@@ -185,21 +200,40 @@ async function JobListingsContent({ searchParams }: JobsPageProps) {
       {jobs.results.length > 0 ? (
         <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {jobs.results.map((job) => (
-            <Link
+            <div
               key={job.id}
-              href={`/jobs/${job.slug}`}
               className="group relative rounded-xl border border-border bg-card p-6 shadow-sm transition-all hover:shadow-lg hover:border-primary/50"
             >
-              {/* Department badge */}
-              <div className="absolute right-4 top-4 max-w-[140px]">
-                <span className="inline-block rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary text-right break-words">
-                  {job.level}
-                </span>
+              {/* Level badge + Bookmark + Compare buttons */}
+              <div className="absolute right-4 top-4 flex items-center gap-2">
+                <CompareButton
+                  job={{
+                    slug: job.slug,
+                    title: job.title,
+                    department: job.department,
+                    location: job.location_city
+                      ? `${job.location_city}, ${job.location_country}`
+                      : (job.location_name ?? ''),
+                  }}
+                />
+                <BookmarkButton
+                  requisitionId={job.id}
+                  initialSavedJobId={savedJobMap[job.slug] ?? null}
+                  isLoggedIn={isLoggedIn}
+                  jobSlug={job.slug}
+                />
+                {job.level && (
+                  <span className="inline-block rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary text-right break-words">
+                    {job.level}
+                  </span>
+                )}
               </div>
 
-              <h2 className="pr-36 text-lg font-semibold leading-tight group-hover:text-primary transition-colors">
-                {job.title}
-              </h2>
+              <Link href={`/jobs/${job.slug}`} className="block">
+                <h2 className="pr-24 text-lg font-semibold leading-tight group-hover:text-primary transition-colors">
+                  {job.title}
+                </h2>
+              </Link>
               <p className="mt-2 text-sm font-medium text-muted-foreground">
                 {job.department}
               </p>
@@ -229,23 +263,29 @@ async function JobListingsContent({ searchParams }: JobsPageProps) {
                 </span>
               </div>
 
-              {/* Salary */}
-              {(job.salary_min || job.salary_max) && (
-                <div className="mt-4 pt-4 border-t border-border">
-                  <p className="text-sm font-semibold text-primary">
-                    {formatSalary(job)}
-                  </p>
+              {/* Salary + Deadline */}
+              {(job.salary_min || job.salary_max || job.application_deadline) && (
+                <div className="mt-4 pt-4 border-t border-border flex items-center justify-between gap-2">
+                  {(job.salary_min || job.salary_max) && (
+                    <p className="text-sm font-semibold text-primary">
+                      {formatSalary(job)}
+                    </p>
+                  )}
+                  <DeadlineBadge deadline={job.application_deadline} />
                 </div>
               )}
 
-              {/* View details indicator */}
-              <div className="mt-4 flex items-center text-sm font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+              {/* View details link */}
+              <Link
+                href={`/jobs/${job.slug}`}
+                className="mt-4 flex items-center text-sm font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+              >
                 View details
                 <svg className="ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-              </div>
-            </Link>
+              </Link>
+            </div>
           ))}
         </div>
       ) : (
@@ -327,6 +367,7 @@ async function JobListingsContent({ searchParams }: JobsPageProps) {
 export default async function JobsPage(props: JobsPageProps) {
   return (
     <>
+      <CompareBar />
       <section className="bg-muted py-10">
         <div className="mx-auto max-w-7xl px-6">
           <h1 className="text-3xl font-bold">Open Positions</h1>

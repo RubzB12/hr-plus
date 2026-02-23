@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LogoutButton } from './logout-button'
+import { NotificationBell } from '@/components/features/notifications/notification-bell'
+import type { CandidateNotification } from '@/types/api'
 
 interface DashboardLayoutClientProps {
   user: {
@@ -10,10 +12,12 @@ interface DashboardLayoutClientProps {
     last_name: string
     email: string
   }
+  unreadCount?: number
+  notifications?: CandidateNotification[]
   children: React.ReactNode
 }
 
-export function DashboardLayoutClient({ user, children }: DashboardLayoutClientProps) {
+export function DashboardLayoutClient({ user, unreadCount = 0, notifications = [], children }: DashboardLayoutClientProps) {
   const pathname = usePathname()
 
   const navItems = [
@@ -32,6 +36,24 @@ export function DashboardLayoutClient({ user, children }: DashboardLayoutClientP
       icon: (
         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      ),
+    },
+    {
+      href: '/dashboard/saved-jobs',
+      label: 'Saved Jobs',
+      icon: (
+        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+        </svg>
+      ),
+    },
+    {
+      href: '/dashboard/interviews',
+      label: 'Interviews',
+      icon: (
+        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
       ),
     },
@@ -95,6 +117,10 @@ export function DashboardLayoutClient({ user, children }: DashboardLayoutClientP
                       {user.email}
                     </p>
                   </div>
+                  <NotificationBell
+                    initialCount={unreadCount}
+                    initialNotifications={notifications}
+                  />
                 </div>
               </div>
 

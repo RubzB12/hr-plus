@@ -3,7 +3,7 @@
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { verifySession } from '@/lib/auth'
-import { updateProfile } from '@/lib/dal'
+import { updateProfile, importResumeSections } from '@/lib/dal'
 
 const ProfileSchema = z.object({
   first_name: z.string().min(1, 'First name is required').max(150),
@@ -76,4 +76,39 @@ export async function updateProfileAction(
 
   revalidatePath('/dashboard/profile')
   return { success: true, message: 'Profile updated successfully.' }
+}
+
+const ALLOWED_SECTIONS = ['skills', 'experiences', 'education'] as const
+const SectionsSchema = z.array(z.enum(ALLOWED_SECTIONS)).min(1)
+
+export interface ImportResumeState {
+  success: boolean
+  message?: string
+}
+
+export async function importResumeSectionsAction(sections: string[]): Promise<ImportResumeState> {
+  try {
+    await verifySession()
+  } catch {
+    return { success: false, message: 'Please log in to import resume data.' }
+  }
+
+  const validated = SectionsSchema.safeParse(sections)
+  if (!validated.success) {
+    return { success: false, message: 'Invalid section selection.' }
+  }
+
+  try {
+    const result = await importResumeSections(validated.data)
+    const counts = result.imported as Record<string, number>
+    const parts = Object.entries(counts)
+      .filter(([, n]) => n > 0)
+      .map(([k, n]) => `${n} ${k}`)
+    const summary = parts.length > 0 ? `Imported ${parts.join(', ')}.` : 'Nothing new to import.'
+    revalidatePath('/dashboard/profile')
+    return { success: true, message: summary }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to import resume data'
+    return { success: false, message }
+  }
 }

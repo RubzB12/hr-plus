@@ -1,7 +1,9 @@
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { getSession } from '@/lib/auth'
+import { getUnreadNotificationCount, getNotifications } from '@/lib/dal'
 import { DashboardLayoutClient } from './layout-client'
+import type { CandidateNotification } from '@/types/api'
 
 export default async function DashboardLayout({
   children,
@@ -23,5 +25,22 @@ export default async function DashboardLayout({
 
   const user = session.user
 
-  return <DashboardLayoutClient user={user}>{children}</DashboardLayoutClient>
+  let unreadCount = 0
+  let notifications: CandidateNotification[] = []
+  try {
+    const [countResult, notifResult] = await Promise.allSettled([
+      getUnreadNotificationCount(),
+      getNotifications(),
+    ])
+    if (countResult.status === 'fulfilled') unreadCount = countResult.value
+    if (notifResult.status === 'fulfilled') notifications = notifResult.value
+  } catch {
+    // Graceful degradation — notifications are non-critical
+  }
+
+  return (
+    <DashboardLayoutClient user={user} unreadCount={unreadCount} notifications={notifications}>
+      {children}
+    </DashboardLayoutClient>
+  )
 }

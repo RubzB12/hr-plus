@@ -208,3 +208,87 @@ class CandidateProfileService:
         )
 
         return counts
+
+    @staticmethod
+    @transaction.atomic
+    def auto_populate_from_resume_sections(
+        candidate: CandidateProfile,
+        sections: list,
+    ) -> Dict[str, int]:
+        """
+        Import selected resume sections into the candidate's profile.
+
+        Args:
+            candidate: CandidateProfile instance with resume_parsed data
+            sections: List of section keys to import: 'skills', 'experiences', 'education'
+
+        Returns:
+            Dictionary with import counts per section
+        """
+        if not candidate.resume_parsed:
+            return {'experiences': 0, 'education': 0, 'skills': 0}
+
+        parsed = candidate.resume_parsed
+        counts = {'experiences': 0, 'education': 0, 'skills': 0}
+
+        if 'experiences' in sections:
+            for exp_data in parsed.get('experiences', []):
+                if not exp_data.get('start_date'):
+                    continue
+                sid = transaction.savepoint()
+                try:
+                    WorkExperience.objects.create(
+                        candidate=candidate,
+                        company_name=exp_data.get('company', 'Unknown'),
+                        title=exp_data.get('title', 'Unknown'),
+                        start_date=exp_data.get('start_date'),
+                        end_date=exp_data.get('end_date'),
+                        is_current=exp_data.get('is_current', False),
+                        description=exp_data.get('description', ''),
+                    )
+                    transaction.savepoint_commit(sid)
+                    counts['experiences'] += 1
+                except Exception as e:
+                    transaction.savepoint_rollback(sid)
+                    logger.warning(f"Failed to import experience: {e}")
+
+        if 'education' in sections:
+            for edu_data in parsed.get('education', []):
+                if not edu_data.get('start_date'):
+                    continue
+                sid = transaction.savepoint()
+                try:
+                    Education.objects.create(
+                        candidate=candidate,
+                        institution=edu_data.get('institution', 'Unknown'),
+                        degree=edu_data.get('degree', 'Unknown'),
+                        field_of_study=edu_data.get('field_of_study', ''),
+                        start_date=edu_data.get('start_date'),
+                        end_date=edu_data.get('end_date'),
+                        gpa=edu_data.get('gpa'),
+                    )
+                    transaction.savepoint_commit(sid)
+                    counts['education'] += 1
+                except Exception as e:
+                    transaction.savepoint_rollback(sid)
+                    logger.warning(f"Failed to import education: {e}")
+
+        if 'skills' in sections:
+            for skill_name in parsed.get('skills', []):
+                sid = transaction.savepoint()
+                try:
+                    _, created = Skill.objects.get_or_create(
+                        candidate=candidate,
+                        name=skill_name.strip(),
+                        defaults={'proficiency': ''},
+                    )
+                    if created:
+                        counts['skills'] += 1
+                except Exception as e:
+                    transaction.savepoint_rollback(sid)
+                    logger.warning(f"Failed to import skill: {e}")
+
+        candidate.profile_completeness = candidate.calculate_completeness()
+        candidate.save(update_fields=['profile_completeness'])
+
+        return counts

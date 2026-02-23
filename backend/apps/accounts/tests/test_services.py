@@ -9,6 +9,8 @@ from apps.core.exceptions import BusinessValidationError, DuplicateError
 
 from .factories import DepartmentFactory, RoleFactory, UserFactory
 
+_TEST_PASSWORD = 'SecurePass123!'  # noqa: S105
+
 User = get_user_model()
 
 
@@ -17,7 +19,7 @@ class TestAuthService:
     def test_register_candidate_creates_user_and_profile(self):
         user = AuthService.register_candidate({
             'email': 'candidate@example.com',
-            'password': 'SecurePass123!',
+            'password': _TEST_PASSWORD,
             'first_name': 'Jane',
             'last_name': 'Doe',
         })
@@ -34,7 +36,7 @@ class TestAuthService:
         with pytest.raises(DuplicateError, match='email already exists'):
             AuthService.register_candidate({
                 'email': 'dupe@example.com',
-                'password': 'SecurePass123!',
+                'password': _TEST_PASSWORD,
                 'first_name': 'Dupe',
                 'last_name': 'User',
             })
@@ -42,7 +44,7 @@ class TestAuthService:
     def test_register_candidate_creates_source(self):
         user = AuthService.register_candidate({
             'email': 'sourced@example.com',
-            'password': 'SecurePass123!',
+            'password': _TEST_PASSWORD,
             'first_name': 'Sourced',
             'last_name': 'User',
             'source': 'linkedin',

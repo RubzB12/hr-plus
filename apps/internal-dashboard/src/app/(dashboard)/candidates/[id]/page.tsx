@@ -21,6 +21,30 @@ function formatDate(dateString: string) {
   })
 }
 
+/** Allow only http/https URLs to prevent javascript: XSS injection. */
+function sanitizeUrl(url: string | null | undefined): string | undefined {
+  if (!url) return undefined
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol === 'https:' || parsed.protocol === 'http:') return url
+  } catch {
+    // Invalid URL — drop it
+  }
+  return undefined
+}
+
+/** Build a safe mailto: href — rejects values that aren't valid email addresses. */
+function safeMailto(email: string | null | undefined): string {
+  if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return `mailto:${email}`
+  return '#'
+}
+
+/** Build a safe tel: href — strips any character that isn't a valid phone symbol. */
+function safeTel(phone: string | null | undefined): string {
+  const sanitized = (phone ?? '').replace(/[^0-9+\-().# ]/g, '')
+  return sanitized ? `tel:${sanitized}` : '#'
+}
+
 export default async function CandidateDetailPage({ params }: CandidateDetailPageProps) {
   const { id } = await params
 
@@ -88,7 +112,7 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPag
               <div className="grid gap-3 md:grid-cols-2 mb-4">
                 <div className="flex items-center gap-2 text-sm">
                   <Mail className="h-4 w-4 text-muted-foreground" />
-                  <a href={`mailto:${candidate.user.email}`} className="hover:underline">
+                  <a href={safeMailto(candidate.user.email)} className="hover:underline">
                     {candidate.user.email}
                   </a>
                 </div>
@@ -96,7 +120,7 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPag
                 {candidate.phone && (
                   <div className="flex items-center gap-2 text-sm">
                     <Phone className="h-4 w-4 text-muted-foreground" />
-                    <a href={`tel:${candidate.phone}`} className="hover:underline">
+                    <a href={safeTel(candidate.phone)} className="hover:underline">
                       {candidate.phone}
                     </a>
                   </div>
@@ -120,7 +144,7 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPag
                   <div className="flex items-center gap-2 text-sm">
                     <Linkedin className="h-4 w-4 text-muted-foreground" />
                     <a
-                      href={candidate.linkedin_url}
+                      href={sanitizeUrl(candidate.linkedin_url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="hover:underline text-primary"
@@ -134,7 +158,7 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPag
                   <div className="flex items-center gap-2 text-sm">
                     <Globe className="h-4 w-4 text-muted-foreground" />
                     <a
-                      href={candidate.portfolio_url}
+                      href={sanitizeUrl(candidate.portfolio_url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="hover:underline text-primary"
@@ -147,7 +171,7 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPag
 
               {candidate.resume_file && (
                 <Button asChild variant="outline">
-                  <a href={candidate.resume_file} target="_blank" rel="noopener noreferrer">
+                  <a href={sanitizeUrl(candidate.resume_file)} target="_blank" rel="noopener noreferrer">
                     <FileText className="h-4 w-4 mr-2" />
                     View Resume
                   </a>

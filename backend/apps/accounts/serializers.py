@@ -13,6 +13,7 @@ from .models import (
     Location,
     Permission,
     Role,
+    SavedJob,
     SavedSearch,
     Skill,
     Team,
@@ -352,3 +353,62 @@ class JobAlertSerializer(serializers.ModelSerializer):
             'was_applied',
         ]
         read_only_fields = ['id', 'sent_at', 'saved_search_name', 'requisition_title', 'requisition_slug']
+
+
+class SavedJobSerializer(serializers.ModelSerializer):
+    """Serializer for candidate bookmarked jobs."""
+
+    requisition_id = serializers.UUIDField(write_only=True)
+    requisition_title = serializers.CharField(source='requisition.title', read_only=True)
+    requisition_slug = serializers.CharField(source='requisition.slug', read_only=True)
+    requisition_department = serializers.CharField(
+        source='requisition.department.name',
+        read_only=True,
+        default='',
+    )
+    requisition_location = serializers.CharField(
+        source='requisition.location.name',
+        read_only=True,
+        default='',
+    )
+    requisition_employment_type = serializers.CharField(
+        source='requisition.employment_type',
+        read_only=True,
+        default='',
+    )
+    requisition_remote_policy = serializers.CharField(
+        source='requisition.remote_policy',
+        read_only=True,
+        default='',
+    )
+    requisition_application_deadline = serializers.DateTimeField(
+        source='requisition.application_deadline',
+        read_only=True,
+        default=None,
+    )
+
+    class Meta:
+        model = SavedJob
+        fields = [
+            'id',
+            'requisition_id',
+            'requisition_title',
+            'requisition_slug',
+            'requisition_department',
+            'requisition_location',
+            'requisition_employment_type',
+            'requisition_remote_policy',
+            'requisition_application_deadline',
+            'created_at',
+        ]
+        read_only_fields = [
+            'id',
+            'requisition_title',
+            'requisition_slug',
+            'requisition_department',
+            'requisition_location',
+            'requisition_employment_type',
+            'requisition_remote_policy',
+            'requisition_application_deadline',
+            'created_at',
+        ]

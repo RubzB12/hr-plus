@@ -179,10 +179,11 @@ export async function createApplication(data: {
   return res.json()
 }
 
-export async function withdrawApplication(id: string) {
+export async function withdrawApplication(id: string, reason: string = '') {
   const res = await fetch(`${API_URL}/api/v1/applications/${id}/withdraw/`, {
     method: 'POST',
-    headers: await getAuthHeaders(),
+    headers: { ...await getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason }),
   })
   if (!res.ok) {
     const error = await res.json()
@@ -343,5 +344,160 @@ export async function getCandidateAnalytics() {
     cache: 'no-store', // Always get fresh analytics
   })
   if (!res.ok) return null
+  return res.json()
+}
+
+// --- Saved Jobs (Bookmarking) ---
+
+export async function getSavedJobs() {
+  const res = await fetch(`${API_URL}/api/v1/candidates/saved-jobs/`, {
+    headers: await getAuthHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.results ?? data
+}
+
+export async function getSavedJobIds(): Promise<string[]> {
+  try {
+    const res = await fetch(`${API_URL}/api/v1/candidates/saved-jobs/ids/`, {
+      headers: await getAuthHeaders(),
+      cache: 'no-store',
+    })
+    if (!res.ok) return []
+    const data = await res.json()
+    return data.ids ?? []
+  } catch {
+    return []
+  }
+}
+
+export async function saveJob(requisitionId: string) {
+  const res = await fetch(`${API_URL}/api/v1/candidates/saved-jobs/`, {
+    method: 'POST',
+    headers: await getAuthHeaders(),
+    body: JSON.stringify({ requisition_id: requisitionId }),
+  })
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(JSON.stringify(error))
+  }
+  return res.json()
+}
+
+export async function unsaveJob(savedJobId: string) {
+  const res = await fetch(`${API_URL}/api/v1/candidates/saved-jobs/${savedJobId}/`, {
+    method: 'DELETE',
+    headers: await getAuthHeaders(),
+  })
+  if (!res.ok) throw new Error('Failed to remove saved job')
+}
+
+// --- Notifications ---
+
+export async function getNotifications() {
+  const res = await fetch(`${API_URL}/api/v1/notifications/?ordering=-created_at`, {
+    headers: await getAuthHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.results ?? data
+}
+
+export async function getUnreadNotificationCount(): Promise<number> {
+  try {
+    const res = await fetch(`${API_URL}/api/v1/notifications/unread-count/`, {
+      headers: await getAuthHeaders(),
+      cache: 'no-store',
+    })
+    if (!res.ok) return 0
+    const data = await res.json()
+    return data.count ?? 0
+  } catch {
+    return 0
+  }
+}
+
+export async function markNotificationRead(id: string) {
+  const res = await fetch(`${API_URL}/api/v1/notifications/${id}/mark_read/`, {
+    method: 'POST',
+    headers: await getAuthHeaders(),
+  })
+  if (!res.ok) throw new Error('Failed to mark notification as read')
+  return res.json()
+}
+
+export async function markAllNotificationsRead() {
+  const res = await fetch(`${API_URL}/api/v1/notifications/mark-all-read/`, {
+    method: 'POST',
+    headers: await getAuthHeaders(),
+  })
+  if (!res.ok) throw new Error('Failed to mark all notifications as read')
+  return res.json()
+}
+
+// --- Resume Import ---
+
+export async function importResumeSections(sections: string[]) {
+  const res = await fetch(`${API_URL}/api/v1/candidates/resume/import/`, {
+    method: 'POST',
+    headers: await getAuthHeaders(),
+    body: JSON.stringify({ sections }),
+  })
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(JSON.stringify(error))
+  }
+  return res.json()
+}
+
+// --- Job Match Score ---
+
+export async function getJobMatchScore(slug: string) {
+  try {
+    const res = await fetch(`${API_URL}/api/v1/jobs/${slug}/match-score/`, {
+      headers: await getAuthHeaders(),
+      cache: 'no-store',
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch {
+    return null
+  }
+}
+
+// --- Interviews ---
+
+export async function getAllInterviews() {
+  const res = await fetch(`${API_URL}/api/v1/interviews/`, {
+    headers: await getAuthHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.results ?? data
+}
+
+export async function getUpcomingInterviews() {
+  const res = await fetch(`${API_URL}/api/v1/interviews/upcoming/`, {
+    headers: await getAuthHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.results ?? data
+}
+
+export async function confirmInterview(id: string) {
+  const res = await fetch(`${API_URL}/api/v1/interviews/${id}/confirm/`, {
+    method: 'POST',
+    headers: await getAuthHeaders(),
+  })
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(JSON.stringify(error))
+  }
   return res.json()
 }

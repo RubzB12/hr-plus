@@ -3,7 +3,9 @@
 import logging
 
 from django.contrib.auth import login, logout
+from django.contrib.auth.password_validation import validate_password as django_validate_password
 from django.contrib.auth.tokens import default_token_generator
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.utils.crypto import get_random_string
 from django.utils.encoding import force_bytes, force_str
@@ -117,6 +119,11 @@ class AuthService(BaseService):
 
         if not default_token_generator.check_token(user, reset_token):
             raise BusinessValidationError('Password reset token has expired.')
+
+        try:
+            django_validate_password(new_password, user=user)
+        except DjangoValidationError as err:
+            raise BusinessValidationError(' '.join(err.messages)) from err
 
         user.set_password(new_password)
         user.save(update_fields=['password'])

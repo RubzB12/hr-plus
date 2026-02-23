@@ -4,6 +4,8 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
+    CandidateAllInterviewsView,
+    CandidateInterviewConfirmView,
     CandidateInterviewListView,
     DebriefViewSet,
     InternalInterviewViewSet,
@@ -18,7 +20,9 @@ internal_router.register('debriefs', DebriefViewSet, basename='debrief')
 
 urlpatterns = [
     # Candidate-facing endpoints
+    path('interviews/', CandidateAllInterviewsView.as_view(), name='candidate-interview-all'),
     path('interviews/upcoming/', CandidateInterviewListView.as_view(), name='candidate-interview-list'),
+    path('interviews/<uuid:pk>/confirm/', CandidateInterviewConfirmView.as_view(), name='candidate-interview-confirm'),
 
     # Internal endpoints
     path('internal/interviews/upcoming/', UpcomingInterviewsView.as_view(), name='upcoming-interviews'),

@@ -30,6 +30,11 @@ urlpatterns = [
         name='public-job-facets',
     ),
     path(
+        'jobs/<slug:slug>/match-score/',
+        views.JobMatchScoreView.as_view(),
+        name='job-match-score',
+    ),
+    path(
         'jobs/<slug:slug>/',
         views.PublicJobDetailView.as_view(),
         name='public-job-detail',

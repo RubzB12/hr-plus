@@ -3,6 +3,8 @@
 import factory
 from django.contrib.auth import get_user_model
 
+_DEFAULT_TEST_PASSWORD = 'TestPass123!'  # noqa: S105
+
 from apps.accounts.models import (
     CandidateProfile,
     Department,
@@ -30,7 +32,7 @@ class UserFactory(factory.django.DjangoModelFactory):
 
     @classmethod
     def _create(cls, model_class, *args, **kwargs):
-        password = kwargs.pop('password', 'TestPass123!')  # noqa: S106
+        password = kwargs.pop('password', _DEFAULT_TEST_PASSWORD)
         user = super()._create(model_class, *args, **kwargs)
         user.set_password(password)
         user.save(update_fields=['password'])

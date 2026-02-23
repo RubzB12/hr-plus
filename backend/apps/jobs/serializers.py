@@ -30,7 +30,7 @@ class PublicJobListSerializer(serializers.ModelSerializer):
             'location_name', 'location_city', 'location_country',
             'employment_type', 'remote_policy',
             'salary_min', 'salary_max', 'salary_currency',
-            'level', 'published_at',
+            'level', 'published_at', 'application_deadline',
         ]
 
 
@@ -53,7 +53,7 @@ class PublicJobDetailSerializer(serializers.ModelSerializer):
             'salary_min', 'salary_max', 'salary_currency',
             'level', 'description',
             'requirements_required', 'requirements_preferred',
-            'screening_questions', 'published_at',
+            'screening_questions', 'published_at', 'application_deadline',
         ]
 
 

@@ -81,6 +81,7 @@ class CandidateApplicationDetailSerializer(serializers.ModelSerializer):
             'department', 'location',
             'status', 'current_stage_name',
             'cover_letter', 'screening_responses',
+            'rejection_reason', 'withdrawal_reason',
             'applied_at', 'withdrawn_at', 'events',
         ]
 

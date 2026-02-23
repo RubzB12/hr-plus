@@ -20,6 +20,7 @@ candidate_router.register(r'education', views.EducationViewSet, basename='candid
 candidate_router.register(r'skills', views.SkillViewSet, basename='candidate-skill')
 candidate_router.register(r'saved-searches', views.SavedSearchViewSet, basename='saved-search')
 candidate_router.register(r'job-alerts', views.JobAlertViewSet, basename='job-alert')
+candidate_router.register(r'saved-jobs', views.SavedJobViewSet, basename='saved-job')
 
 # Auth endpoints
 auth_urlpatterns = [
@@ -35,6 +36,7 @@ auth_urlpatterns = [
 candidate_urlpatterns = [
     path('profile/', views.CandidateProfileView.as_view(), name='candidate-profile'),
     path('resume/', views.ResumeUploadView.as_view(), name='candidate-resume-upload'),
+    path('resume/import/', views.ResumeImportView.as_view(), name='candidate-resume-import'),
     path('recommendations/', views.JobRecommendationsView.as_view(), name='candidate-recommendations'),
     path('analytics/', views.CandidateAnalyticsView.as_view(), name='candidate-analytics'),
     path('', include(candidate_router.urls)),

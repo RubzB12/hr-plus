@@ -6,6 +6,8 @@ from rest_framework.test import APIClient
 
 from apps.accounts.models import CandidateProfile
 
+_TEST_PASSWORD = 'SecurePass123!'  # noqa: S105
+
 from .factories import (
     CandidateProfileFactory,
     DepartmentFactory,
@@ -39,7 +41,7 @@ class TestRegisterView:
             reverse('auth-register'),
             {
                 'email': 'new@example.com',
-                'password': 'SecurePass123!',
+                'password': _TEST_PASSWORD,
                 'first_name': 'New',
                 'last_name': 'Candidate',
             },
@@ -58,7 +60,7 @@ class TestRegisterView:
             reverse('auth-register'),
             {
                 'email': 'existing@example.com',
-                'password': 'SecurePass123!',
+                'password': _TEST_PASSWORD,
                 'first_name': 'Dupe',
                 'last_name': 'User',
             },
@@ -89,7 +91,7 @@ class TestLoginView:
 
         response = api_client.post(
             reverse('auth-login'),
-            {'email': 'login@test.com', 'password': 'TestPass123!'},
+            {'email': 'login@test.com', 'password': _TEST_PASSWORD},
             format='json',
         )
 
@@ -101,7 +103,7 @@ class TestLoginView:
 
         response = api_client.post(
             reverse('auth-login'),
-            {'email': 'login@test.com', 'password': 'WrongPass!'},
+            {'email': 'login@test.com', 'password': 'WrongPass!'},  # noqa: S105
             format='json',
         )
 
@@ -110,7 +112,7 @@ class TestLoginView:
     def test_login_nonexistent_user(self, api_client):
         response = api_client.post(
             reverse('auth-login'),
-            {'email': 'ghost@test.com', 'password': 'Whatever123!'},
+            {'email': 'ghost@test.com', 'password': 'Whatever123!'},  # noqa: S105
             format='json',
         )
 

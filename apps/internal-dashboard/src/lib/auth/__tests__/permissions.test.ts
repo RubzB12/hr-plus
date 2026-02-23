@@ -10,6 +10,9 @@ jest.mock('../session')
 
 const mockGetSession = getSession as jest.MockedFunction<typeof getSession>
 
+// Test-only stub values — not real credentials
+const TEST_ACCESS_TOKEN = 'test-token-stub'
+
 describe('Auth Permissions', () => {
   const mockSession = {
     user: {
@@ -20,7 +23,7 @@ describe('Auth Permissions', () => {
       is_internal: true,
       is_active: true,
     },
-    accessToken: 'test-token',
+    accessToken: TEST_ACCESS_TOKEN,
     permissions: ['applications.view_application', 'candidates.view_candidate', 'offers.create_offer'],
   }
 

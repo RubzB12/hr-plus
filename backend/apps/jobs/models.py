@@ -124,6 +124,11 @@ class Requisition(BaseModel):
     opened_at = models.DateTimeField(null=True, blank=True)
     closed_at = models.DateTimeField(null=True, blank=True)
     published_at = models.DateTimeField(null=True, blank=True)
+    application_deadline = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='Deadline for submitting applications. Shown as "Closes in X days" on job listings.',
+    )
     created_by = models.ForeignKey(
         'accounts.InternalUser',
         on_delete=models.PROTECT,

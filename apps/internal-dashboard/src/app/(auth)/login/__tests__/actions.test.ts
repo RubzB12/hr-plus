@@ -12,6 +12,11 @@ jest.mock('next/navigation')
 const mockCookies = cookies as jest.MockedFunction<typeof cookies>
 const mockRedirect = redirect as jest.MockedFunction<typeof redirect>
 
+// Test-only credential constants — not real credentials
+const TEST_EMAIL = 'test@example.com'
+const TEST_PASSWORD = 'password123'
+const TEST_WRONG_PASSWORD = 'wrongpassword'
+
 describe('Login Action', () => {
   let mockCookieStore: any
 
@@ -32,7 +37,7 @@ describe('Login Action', () => {
   it('should validate email format', async () => {
     const formData = new FormData()
     formData.set('email', 'invalid-email')
-    formData.set('password', 'password123')
+    formData.set('password', TEST_PASSWORD)
 
     const result = await loginAction(null, formData)
 
@@ -44,7 +49,7 @@ describe('Login Action', () => {
 
   it('should validate password is not empty', async () => {
     const formData = new FormData()
-    formData.set('email', 'test@example.com')
+    formData.set('email', TEST_EMAIL)
     formData.set('password', '')
 
     const result = await loginAction(null, formData)
@@ -57,8 +62,8 @@ describe('Login Action', () => {
 
   it('should return error for invalid credentials', async () => {
     const formData = new FormData()
-    formData.set('email', 'test@example.com')
-    formData.set('password', 'wrongpassword')
+    formData.set('email', TEST_EMAIL)
+    formData.set('password', TEST_WRONG_PASSWORD)
 
     ;(global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: false,
@@ -83,8 +88,8 @@ describe('Login Action', () => {
 
   it('should set session cookie and redirect on successful login', async () => {
     const formData = new FormData()
-    formData.set('email', 'test@example.com')
-    formData.set('password', 'password123')
+    formData.set('email', TEST_EMAIL)
+    formData.set('password', TEST_PASSWORD)
 
     const mockHeaders = new Headers()
     mockHeaders.set('set-cookie', 'sessionid=test-session-123; Path=/; HttpOnly')
@@ -115,8 +120,8 @@ describe('Login Action', () => {
 
   it('should handle network errors', async () => {
     const formData = new FormData()
-    formData.set('email', 'test@example.com')
-    formData.set('password', 'password123')
+    formData.set('email', TEST_EMAIL)
+    formData.set('password', TEST_PASSWORD)
 
     ;(global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'))
 
@@ -132,8 +137,8 @@ describe('Login Action', () => {
     process.env.DJANGO_API_URL = 'https://test-api.example.com'
 
     const formData = new FormData()
-    formData.set('email', 'test@example.com')
-    formData.set('password', 'password123')
+    formData.set('email', TEST_EMAIL)
+    formData.set('password', TEST_PASSWORD)
 
     ;(global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: false,
